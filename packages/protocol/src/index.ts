@@ -30,5 +30,21 @@ export {
   AGENT_STATUS,
 } from './agent'
 
+export type {
+  ContainerListMessage,
+  ContainerListPayload,
+  ContainerListedMessage,
+  ContainerListedPayload,
+  ContainerMessage,
+  ContainerMessageType,
+  ContainerSummary,
+} from './container'
+
+export {
+  CONTAINER_LIST,
+  CONTAINER_LISTED,
+  CONTAINER_MESSAGE_TYPE,
+} from './container'
+
 export type { ProtocolErrorCode } from './errors'
 export { ERROR_DOMAIN, PROTOCOL_ERROR_CODE } from './errors'

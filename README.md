@@ -4,7 +4,7 @@ Open-source Docker management and observability platform.
 
 DockSight helps developers and teams visually manage Docker environments, monitor containers, inspect logs, organize environments, and later connect multiple Docker hosts through lightweight agents.
 
-> Foundation stage: repository structure and configuration only. Business features are not implemented yet.
+> Current increment: first read-only dashboard for Docker hosts and containers.
 
 ## Architecture overview
 
@@ -14,8 +14,8 @@ DockSight is a monorepo with a modular-monolith backend:
 | --- | --- |
 | `apps/web` | React + Vite dashboard |
 | `apps/server` | NestJS API (Prisma, Redis, WebSockets, Swagger) |
-| `agent` | Go Docker host agent (structure only) |
-| `packages/*` | Shared types, config, and utilities |
+| `agent` | Go Docker host agent (WS registration + discovery) |
+| `packages/*` | Shared types, protocol, config, and utilities |
 | `infrastructure/` | Docker and deployment assets |
 | `docs/` | Architecture and ADRs |
 
@@ -24,7 +24,9 @@ Web (React) ──HTTP/WS──► Server (NestJS modular monolith)
                               │
                     PostgreSQL + Redis
                               │
-                    Go agents (future multi-host)
+                    Go agents ◄──WebSocket──► /agents
+                              │
+                         Docker Engine
 ```
 
 See [docs/architecture.md](docs/architecture.md) for details.
@@ -33,7 +35,7 @@ See [docs/architecture.md](docs/architecture.md) for details.
 
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Query, Zustand, Lucide
 - **Backend:** NestJS, TypeScript, Prisma, PostgreSQL, Redis, WebSockets, Swagger
-- **Agent:** Go (Docker Engine API + WebSocket planned)
+- **Agent:** Go (Docker Engine API + WebSocket registration/discovery)
 - **Infra:** Docker Compose
 
 ## Prerequisites
@@ -94,14 +96,33 @@ npm run dev:server
 npm run dev:web
 ```
 
+### Run the agent (registration + Docker discovery)
+
+```bash
+# Terminal A — infrastructure
+docker compose up -d
+
+# Terminal B — backend
+npm run dev:server
+
+# Terminal C — agent
+cd agent
+go run ./cmd/agent
+```
+
+Expected:
+
+1. Agent connects to `ws://localhost:3000/agents`
+2. Agent registers (`agent.register` → `agent.registered`)
+3. Server sends `container.list`
+4. Agent queries Docker Engine and replies with `container.listed`
+5. Heartbeats continue every 30s
+
+Protocol reference: [docs/protocol.md](docs/protocol.md)
+
 - Web: http://localhost:5173
 - API / Swagger: http://localhost:3000/api/docs
-
-Point `apps/server/.env` `DATABASE_URL` at:
-
-`postgresql://docksight:change_me@localhost:5432/docksight?schema=public`
-
-(or match the values in the root `.env`).
+- Agent WS: `ws://localhost:3000/agents`
 
 ## Useful commands
 

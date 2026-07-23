@@ -214,6 +214,55 @@ Agent                                 Server
 
 ---
 
+### 5.4 `container.list`
+
+- **Direction:** Server → Agent  
+- **When:** After successful registration (and whenever the server requests discovery)  
+- **Purpose:** Ask the agent to query Docker Engine for containers (read-only)
+
+```json
+{
+  "type": "container.list",
+  "payload": {}
+}
+```
+
+---
+
+### 5.5 `container.listed`
+
+- **Direction:** Agent → Server  
+- **When:** Response to `container.list`  
+- **Purpose:** Return discovered containers (not persisted in v0.1 — server logs only)
+
+```json
+{
+  "type": "container.listed",
+  "payload": {
+    "containers": [
+      {
+        "id": "abc123...",
+        "name": "docksight-postgres",
+        "image": "postgres:17-alpine",
+        "status": "Up 2 hours (healthy)",
+        "state": "running"
+      }
+    ]
+  }
+}
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `containers` | `array` | yes | Container summaries |
+| `containers[].id` | `string` | yes | Docker container id |
+| `containers[].name` | `string` | yes | Container name |
+| `containers[].image` | `string` | yes | Image reference |
+| `containers[].status` | `string` | yes | Human status string from Docker |
+| `containers[].state` | `string` | yes | State (e.g. `running`, `exited`) |
+
+---
+
 ## 6. Reserved message types (not implemented yet)
 
 These types are reserved so future work does not invent incompatible shapes. Payloads below are **draft contracts** and may gain fields, but type names SHOULD stay stable.
@@ -236,12 +285,12 @@ These types are reserved so future work does not invent incompatible shapes. Pay
 }
 ```
 
-### 6.2 Containers
+### 6.2 Containers (command extensions — not in v0.1)
+
+Beyond `container.list` / `container.listed` (implemented), these remain reserved:
 
 | Type | Direction | Purpose |
 | --- | --- | --- |
-| `container.list` | Server → Agent | Request container inventory |
-| `container.listed` | Agent → Server | Inventory snapshot |
 | `container.inspect` | Server → Agent | Request one container |
 | `container.inspected` | Agent → Server | Inspect result |
 | `container.start` | Server → Agent | Start container |

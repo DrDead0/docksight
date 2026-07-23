@@ -10,6 +10,10 @@ async function bootstrap() {
 
   app.useWebSocketAdapter(new WsAdapter(app));
   app.setGlobalPrefix('api');
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('DockSight API')

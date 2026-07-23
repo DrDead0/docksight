@@ -5,17 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sync"
 	"time"
 
+	"docksight-agent/internal/docker"
 	"docksight-agent/internal/logger"
 
 	"github.com/gorilla/websocket"
 )
 
 const (
-	TypeRegister   = "agent.register"
-	TypeRegistered = "agent.registered"
-	TypeHeartbeat  = "agent.heartbeat"
+	TypeRegister         = "agent.register"
+	TypeRegistered       = "agent.registered"
+	TypeHeartbeat        = "agent.heartbeat"
+	TypeContainerList    = "container.list"
+	TypeContainerListed  = "container.listed"
 )
 
 // Envelope is the JSON message wrapper exchanged with the DockSight server.
@@ -46,6 +50,20 @@ type HeartbeatPayload struct {
 	UUID string `json:"uuid"`
 }
 
+// ContainerSummary matches protocol container discovery fields.
+type ContainerSummary struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Image  string `json:"image"`
+	Status string `json:"status"`
+	State  string `json:"state"`
+}
+
+// ContainerListedPayload is sent on container.listed.
+type ContainerListedPayload struct {
+	Containers []ContainerSummary `json:"containers"`
+}
+
 // AgentInfo is local metadata included in registration.
 type AgentInfo struct {
 	UUID         string
@@ -59,21 +77,24 @@ type AgentInfo struct {
 type Client struct {
 	serverURL      string
 	info           AgentInfo
+	docker         *docker.Service
 	heartbeatEvery time.Duration
 	reconnectWait  time.Duration
+	writeMu        sync.Mutex
 }
 
 // NewClient creates a reconnecting agent communication client.
-func NewClient(serverURL string, info AgentInfo) *Client {
+func NewClient(serverURL string, info AgentInfo, dockerService *docker.Service) *Client {
 	return &Client{
 		serverURL:      serverURL,
 		info:           info,
+		docker:         dockerService,
 		heartbeatEvery: 30 * time.Second,
 		reconnectWait:  5 * time.Second,
 	}
 }
 
-// Run connects, registers, heartbeats, and reconnects until ctx is cancelled.
+// Run connects, registers, heartbeats, handles commands, and reconnects until ctx is cancelled.
 func (c *Client) Run(ctx context.Context) {
 	attempt := 0
 	for {
@@ -111,6 +132,7 @@ func (c *Client) session(ctx context.Context) error {
 	defer conn.Close()
 
 	logger.Info("websocket connected", "url", c.serverURL)
+	logger.Printf("Connected\n")
 
 	if err := c.sendRegister(conn); err != nil {
 		return err
@@ -126,8 +148,10 @@ func (c *Client) session(ctx context.Context) error {
 		"status", registered.Status,
 		"message", registered.Message,
 	)
+	logger.Printf("Registration successful\n")
+	logger.Printf("Heartbeat running\n")
 
-	return c.heartbeatLoop(ctx, conn)
+	return c.serve(ctx, conn)
 }
 
 func (c *Client) sendRegister(conn *websocket.Conn) error {
@@ -159,36 +183,44 @@ func (c *Client) waitRegistered(conn *websocket.Conn, timeout time.Duration) (*R
 		if err := json.Unmarshal(data, &env); err != nil {
 			continue
 		}
-		if env.Type != TypeRegistered {
-			continue
-		}
 
-		var payload RegisteredPayload
-		if err := json.Unmarshal(env.Payload, &payload); err != nil {
-			return nil, fmt.Errorf("parse registered payload: %w", err)
+		// Server may already send container.list; handle after register ack only.
+		if env.Type == TypeRegistered {
+			var payload RegisteredPayload
+			if err := json.Unmarshal(env.Payload, &payload); err != nil {
+				return nil, fmt.Errorf("parse registered payload: %w", err)
+			}
+			if payload.Message != "" && payload.ID == "" && payload.UUID == "" {
+				return nil, fmt.Errorf("registration failed: %s", payload.Message)
+			}
+			return &payload, nil
 		}
-		if payload.Message != "" && payload.ID == "" && payload.UUID == "" {
-			return nil, fmt.Errorf("registration failed: %s", payload.Message)
-		}
-		return &payload, nil
 	}
 }
 
-func (c *Client) heartbeatLoop(ctx context.Context, conn *websocket.Conn) error {
+func (c *Client) serve(ctx context.Context, conn *websocket.Conn) error {
 	ticker := time.NewTicker(c.heartbeatEvery)
 	defer ticker.Stop()
 
+	incoming := make(chan Envelope, 16)
 	errCh := make(chan error, 1)
+
 	go func() {
 		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
+			_, data, err := conn.ReadMessage()
+			if err != nil {
 				errCh <- err
 				return
 			}
+			var env Envelope
+			if err := json.Unmarshal(data, &env); err != nil {
+				logger.Warn("ignored invalid server message", "error", err.Error())
+				continue
+			}
+			incoming <- env
 		}
 	}()
 
-	// Send an immediate heartbeat after registration.
 	if err := c.sendHeartbeat(conn); err != nil {
 		return err
 	}
@@ -203,6 +235,10 @@ func (c *Client) heartbeatLoop(ctx context.Context, conn *websocket.Conn) error 
 			return ctx.Err()
 		case err := <-errCh:
 			return fmt.Errorf("connection closed: %w", err)
+		case env := <-incoming:
+			if err := c.handleServerMessage(ctx, conn, env); err != nil {
+				logger.Warn("failed handling server message", "type", env.Type, "error", err.Error())
+			}
 		case <-ticker.C:
 			if err := c.sendHeartbeat(conn); err != nil {
 				return err
@@ -210,6 +246,55 @@ func (c *Client) heartbeatLoop(ctx context.Context, conn *websocket.Conn) error 
 			logger.Debug("heartbeat sent", "uuid", c.info.UUID)
 		}
 	}
+}
+
+func (c *Client) handleServerMessage(ctx context.Context, conn *websocket.Conn, env Envelope) error {
+	switch env.Type {
+	case TypeContainerList:
+		return c.handleContainerList(ctx, conn)
+	case TypeRegistered:
+		// Already handled during startup; ignore duplicates.
+		return nil
+	default:
+		logger.Warn("unknown server message type", "type", env.Type)
+		return nil
+	}
+}
+
+func (c *Client) handleContainerList(ctx context.Context, conn *websocket.Conn) error {
+	if c.docker == nil {
+		return c.writeContainerListed(conn, nil)
+	}
+
+	items, err := c.docker.ListContainers(ctx)
+	if err != nil {
+		return fmt.Errorf("list containers: %w", err)
+	}
+
+	summaries := make([]ContainerSummary, 0, len(items))
+	for _, item := range items {
+		summaries = append(summaries, ContainerSummary{
+			ID:     item.ID,
+			Name:   item.Name,
+			Image:  item.Image,
+			Status: item.Status,
+			State:  item.State,
+		})
+	}
+
+	logger.Info("container discovery complete", "count", len(summaries))
+	return c.writeContainerListed(conn, summaries)
+}
+
+func (c *Client) writeContainerListed(conn *websocket.Conn, containers []ContainerSummary) error {
+	if containers == nil {
+		containers = []ContainerSummary{}
+	}
+	payload, err := json.Marshal(ContainerListedPayload{Containers: containers})
+	if err != nil {
+		return err
+	}
+	return c.write(conn, Envelope{Type: TypeContainerListed, Payload: payload})
 }
 
 func (c *Client) sendHeartbeat(conn *websocket.Conn) error {
@@ -225,5 +310,7 @@ func (c *Client) write(conn *websocket.Conn, env Envelope) error {
 	if err != nil {
 		return err
 	}
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
 	return conn.WriteMessage(websocket.TextMessage, data)
 }

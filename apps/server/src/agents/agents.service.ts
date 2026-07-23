@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Agent, AgentStatus } from '../../generated/prisma/client';
-import { PrismaService } from '../common/database/prisma.service';
 import type {
   AgentRegisterPayload,
   AgentRegisteredPayload,
-} from './messages';
+} from '@docksight/protocol';
+import { Agent, AgentStatus } from '../../generated/prisma/client';
+import { PrismaService } from '../common/database/prisma.service';
 
 @Injectable()
 export class AgentsService {
@@ -77,6 +77,10 @@ export class AgentsService {
 
   findByUuid(uuid: string): Promise<Agent | null> {
     return this.prisma.agent.findUnique({ where: { uuid } });
+  }
+
+  findById(id: string): Promise<Agent | null> {
+    return this.prisma.agent.findUnique({ where: { id } });
   }
 
   findAll(): Promise<Agent[]> {
