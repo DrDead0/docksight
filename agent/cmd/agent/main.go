@@ -1,21 +1,20 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
-	"docksight-agent/internal/config"
+	"docksight-agent/internal/app"
 )
 
-// DockSight agent entrypoint.
-// Docker Engine API integration and backend WebSocket communication
-// will be implemented in later milestones.
 func main() {
-	cfg, err := config.Load()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
+	configPath := flag.String("config", "config.yaml", "path to agent config.yaml")
+	flag.Parse()
+
+	application := app.New(*configPath)
+	if err := application.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "docksight-agent: %v\n", err)
 		os.Exit(1)
 	}
-
-	fmt.Printf("DockSight agent foundation ready (server=%s)\n", cfg.ServerURL)
 }
