@@ -1,12 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { WsAdapter } from '@nestjs/platform-ws';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
+  app.useWebSocketAdapter(new WsAdapter(app));
   app.setGlobalPrefix('api');
 
   const swaggerConfig = new DocumentBuilder()
@@ -25,6 +27,7 @@ async function bootstrap() {
 
   console.log(`DockSight API listening on http://localhost:${port}`);
   console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  console.log(`Agent WebSocket endpoint at ws://localhost:${port}/agents`);
 }
 
 bootstrap();

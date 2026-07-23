@@ -1,9 +1,7 @@
 // DockSight Prisma schema
-// Database foundation only — no business models yet.
 // https://pris.ly/d/prisma-schema
 //
-// Connection URL is loaded from DATABASE_URL via prisma.config.ts
-// (Prisma 7 no longer places `url` inside the schema datasource block).
+// Connection URL is loaded from DATABASE_URL via prisma.config.ts.
 
 generator client {
   provider     = "prisma-client"
@@ -13,4 +11,25 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum AgentStatus {
+  ONLINE
+  OFFLINE
+  UNKNOWN
+}
+
+model Agent {
+  id           String      @id @default(cuid())
+  uuid         String      @unique
+  hostname     String
+  os           String
+  architecture String
+  version      String
+  status       AgentStatus @default(UNKNOWN)
+  lastSeen     DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("agents")
 }

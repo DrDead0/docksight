@@ -43,3 +43,7 @@ go run ./cmd/agent
 ```
 
 WebSocket URL defaults to `ws://localhost:3000/agents` (`server.url` in `config.yaml`).
+
+Protocol specification (envelope, message types, future domains):
+
+- [docs/protocol.md](../docs/protocol.md)

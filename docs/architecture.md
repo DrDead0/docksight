@@ -81,6 +81,7 @@ DockSight is organized as an npm workspace monorepo with three primary runtime p
 3. **Agents for multi-host** — remote Docker hosts connect later via Go agents, not by embedding host credentials in the dashboard alone.
 4. **Foundation before features** — structure, configuration, and contracts land before business logic.
 5. **Clean boundaries** — web, server, agent, and shared packages remain independently understandable.
+6. **Stable agent protocol** — server↔agent WebSocket messages share one JSON envelope; see [protocol.md](./protocol.md).
 
 ## Current status
 
