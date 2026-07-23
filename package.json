@@ -17,10 +17,10 @@
     "db:generate": "npm run prisma:generate --workspace=@docksight/server",
     "db:migrate": "npm run prisma:migrate --workspace=@docksight/server",
     "db:studio": "npm run prisma:studio --workspace=@docksight/server",
-    "docker:up": "docker compose up --build -d",
+    "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:infra": "docker compose up -d postgres redis",
+    "docker:infra": "docker compose up -d",
     "setup": "node scripts/setup.mjs"
   },
   "engines": {

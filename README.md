@@ -43,51 +43,65 @@ See [docs/architecture.md](docs/architecture.md) for details.
 - Docker and Docker Compose
 - Go 1.22+ (only needed for agent work)
 
-## Development setup
+## Development Environment
 
-### 1. Clone and install
+DockSight’s Compose stack runs **infrastructure only** (PostgreSQL + Redis). The frontend, backend, and Go agent stay on your host machine during development.
+
+### 1. Start infrastructure
 
 ```bash
-git clone <repository-url> docksight
-cd docksight
 cp .env.example .env
-cp apps/server/.env.example apps/server/.env
-cp apps/web/.env.example apps/web/.env
+docker compose up -d
+```
+
+This starts:
+
+- PostgreSQL on `localhost:5432`
+- Redis on `localhost:6379`
+
+Both services join the `docksight-network` network and use named volumes `postgres-data` and `redis-data`.
+
+### 2. Verify
+
+```bash
+docker ps
+```
+
+You should see `docksight-postgres` and `docksight-redis` (healthy).
+
+### 3. Stop
+
+```bash
+docker compose down
+```
+
+Containers stop; volumes are kept.
+
+### 4. Remove volumes
+
+```bash
+docker compose down -v
+```
+
+Stops containers and deletes `postgres-data` / `redis-data` (all local DB/cache data).
+
+### Run apps on the host
+
+```bash
 npm install
-```
-
-### 2. Start infrastructure
-
-```bash
-npm run docker:infra
-```
-
-This starts PostgreSQL and Redis.
-
-### 3. Prepare the database client
-
-```bash
 npm run db:generate
-```
-
-### 4. Run apps locally
-
-In separate terminals:
-
-```bash
 npm run dev:server
 npm run dev:web
 ```
 
 - Web: http://localhost:5173
-- API: http://localhost:3000/api/health
-- Swagger: http://localhost:3000/docs
+- API / Swagger: http://localhost:3000/api/docs
 
-### Full stack via Compose
+Point `apps/server/.env` `DATABASE_URL` at:
 
-```bash
-npm run docker:up
-```
+`postgresql://docksight:change_me@localhost:5432/docksight?schema=public`
+
+(or match the values in the root `.env`).
 
 ## Useful commands
 
@@ -96,8 +110,7 @@ npm run docker:up
 | `npm run dev:web` | Start Vite dashboard |
 | `npm run dev:server` | Start NestJS in watch mode |
 | `npm run build` | Build workspaces |
-| `npm run docker:infra` | Start Postgres + Redis |
-| `npm run docker:up` | Start full Compose stack |
+| `npm run docker:up` / `docker:infra` | Start Postgres + Redis |
 | `npm run docker:down` | Stop Compose stack |
 | `npm run db:generate` | Generate Prisma client |
 | `npm run db:migrate` | Run Prisma migrations |

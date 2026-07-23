@@ -1,78 +1,67 @@
+# DockSight local development infrastructure
+# Starts PostgreSQL and Redis only.
+# Frontend, backend, and agent run on the host — not in Compose.
+
 services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — primary relational database for DockSight
+  # ---------------------------------------------------------------------------
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: docksight-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-docksight}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docksight}
       POSTGRES_DB: ${POSTGRES_DB:-docksight}
+      POSTGRES_USER: ${POSTGRES_USER:-docksight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - docksight_postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - docksight-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-docksight} -d ${POSTGRES_DB:-docksight}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-docksight} -d ${POSTGRES_DB:-docksight}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
+  # ---------------------------------------------------------------------------
+  # Redis — cache / pub-sub placeholder for future realtime features
+  # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
     container_name: docksight-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - docksight_redis_data:/data
+      - redis-data:/data
+    networks:
+      - docksight-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 5s
 
-  server:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/server.Dockerfile
-    container_name: docksight-server
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      NODE_ENV: development
-      SERVER_PORT: 3000
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-docksight}:${POSTGRES_PASSWORD:-docksight}@postgres:5432/${POSTGRES_DB:-docksight}?schema=public
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_URL: redis://redis:6379
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./apps/server/src:/app/apps/server/src
-      - ./apps/server/prisma:/app/apps/server/prisma
-
-  web:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/web.Dockerfile
-    container_name: docksight-web
-    restart: unless-stopped
-    depends_on:
-      - server
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
-      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3000}
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./apps/web/src:/app/apps/web/src
-      - ./apps/web/index.html:/app/apps/web/index.html
-
+# ---------------------------------------------------------------------------
+# Named volumes — persist data across container restarts
+# ---------------------------------------------------------------------------
 volumes:
-  docksight_postgres_data:
-  docksight_redis_data:
+  postgres-data:
+  redis-data:
+
+# ---------------------------------------------------------------------------
+# Dedicated network for DockSight development services
+# ---------------------------------------------------------------------------
+networks:
+  docksight-network:
+    name: docksight-network
+    driver: bridge

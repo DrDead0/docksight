@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 set -e
 
-echo "Starting DockSight full Docker Compose stack..."
-docker compose up --build -d
+echo "Starting DockSight infrastructure (PostgreSQL + Redis)..."
+docker compose up -d
 docker compose ps
