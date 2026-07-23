@@ -1,12 +1,16 @@
 // DockSight Prisma schema
-// Models will be added as domain features are implemented.
+// Database foundation only — no business models yet.
 // https://pris.ly/d/prisma-schema
+//
+// Connection URL is loaded from DATABASE_URL via prisma.config.ts
+// (Prisma 7 no longer places `url` inside the schema datasource block).
 
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }

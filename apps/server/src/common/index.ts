@@ -1,2 +1,2 @@
-/** Shared NestJS utilities and cross-cutting concerns. */
-export {}
+/** Shared NestJS infrastructure (database, Redis, WebSocket). */
+export {};

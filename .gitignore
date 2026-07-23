@@ -45,6 +45,7 @@ coverage/
 # Prisma
 apps/server/prisma/*.db
 apps/server/prisma/*.db-journal
+apps/server/generated/
 
 # Go
 agent/bin/

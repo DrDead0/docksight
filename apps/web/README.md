@@ -1,32 +1,62 @@
-# React + TypeScript + Vite
+# DockSight Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React dashboard for DockSight — open-source Docker management and observability.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
+- React Query
+- Zustand
+- Lucide React
 
-## React Compiler
+## Install dependencies
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+From the monorepo root:
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Or from this package:
+
+```bash
+cd apps/web
+npm install
+```
+
+## Environment
+
+```bash
+cp .env.example .env
+```
+
+```env
+VITE_API_URL=
+```
+
+## Run development server
+
+```bash
+npm run dev
+```
+
+App: `http://localhost:5173`
+
+## Project structure
+
+```
+src/
+├── app/           # App shell and providers
+├── components/    # Reusable UI (shadcn/ui)
+├── features/      # Future business features
+├── hooks/         # Reusable React hooks
+├── services/      # Future API communication
+├── stores/        # Future Zustand stores
+├── types/         # Shared frontend types
+├── utils/         # Helper functions
+└── lib/           # Shared utilities (e.g. cn)
+```

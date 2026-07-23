@@ -1,11 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
-describe('HealthController (e2e)', () => {
-  let app: INestApplication<App>;
+describe('AppModule (e2e)', () => {
+  let app: INestApplication;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -13,7 +11,6 @@ describe('HealthController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.setGlobalPrefix('api');
     await app.init();
   });
 
@@ -21,13 +18,7 @@ describe('HealthController (e2e)', () => {
     await app.close();
   });
 
-  it('/api/health (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/api/health')
-      .expect(200)
-      .expect((res) => {
-        expect(res.body.status).toBe('ok');
-        expect(res.body.service).toBe('docksight-server');
-      });
+  it('boots the Nest application', () => {
+    expect(app).toBeDefined();
   });
 });

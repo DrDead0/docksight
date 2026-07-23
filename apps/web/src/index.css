@@ -24,25 +24,26 @@
   --radius-lg: var(--radius);
 }
 
+/* Dark dashboard-friendly foundation theme */
 :root {
-  --background: 210 20% 98%;
-  --foreground: 222 47% 11%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 199 89% 38%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 16% 93%;
-  --secondary-foreground: 222 47% 11%;
-  --muted: 210 16% 93%;
-  --muted-foreground: 215 16% 40%;
-  --accent: 199 40% 94%;
-  --accent-foreground: 199 89% 28%;
+  --background: 222 47% 7%;
+  --foreground: 210 40% 96%;
+  --card: 222 41% 10%;
+  --card-foreground: 210 40% 96%;
+  --popover: 222 41% 10%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 199 89% 48%;
+  --primary-foreground: 222 47% 7%;
+  --secondary: 217 25% 16%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 217 25% 14%;
+  --muted-foreground: 215 16% 65%;
+  --accent: 217 25% 18%;
+  --accent-foreground: 210 40% 96%;
   --destructive: 0 72% 51%;
-  --border: 214 20% 88%;
-  --input: 214 20% 88%;
-  --ring: 199 89% 38%;
+  --border: 217 20% 18%;
+  --input: 217 20% 18%;
+  --ring: 199 89% 48%;
   --radius: 0.5rem;
 }
 
