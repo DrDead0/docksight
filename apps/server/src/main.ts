@@ -1,3 +1,4 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -14,6 +15,12 @@ async function bootstrap() {
     origin: true,
     credentials: true,
   });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('DockSight API')

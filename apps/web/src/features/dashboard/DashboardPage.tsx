@@ -2,15 +2,20 @@ import { useEffect, useMemo, useState } from 'react'
 import { Container, RefreshCw } from 'lucide-react'
 import { ContainerTable } from '@/components/ContainerTable'
 import { HostCard } from '@/components/HostCard'
+import { useToast } from '@/components/ToastProvider'
 import { Button } from '@/components/ui/button'
+import { useContainerAction } from '@/hooks/useContainerAction'
 import { useContainers } from '@/hooks/useContainers'
 import { useHosts } from '@/hooks/useHosts'
 import { ApiError } from '@/services/api'
+import type { Container as ContainerRow, ContainerAction } from '@/types/api'
 
 export function DashboardPage() {
+  const toast = useToast()
   const hostsQuery = useHosts()
   const hosts = hostsQuery.data ?? []
   const [selectedHostId, setSelectedHostId] = useState<string | undefined>()
+  const [busyKey, setBusyKey] = useState<string | null>(null)
 
   useEffect(() => {
     if (hosts.length === 0) {
@@ -23,12 +28,62 @@ export function DashboardPage() {
   }, [hosts, selectedHostId])
 
   const containersQuery = useContainers(selectedHostId)
+  const containerAction = useContainerAction()
   const selectedHost = useMemo(
     () => hosts.find((host) => host.id === selectedHostId),
     [hosts, selectedHostId],
   )
 
   const onlineCount = hosts.filter((host) => host.status === 'ONLINE').length
+
+  async function handleContainerAction(
+    container: ContainerRow,
+    action: ContainerAction,
+  ) {
+    if (!selectedHostId) {
+      return
+    }
+
+    setBusyKey(`${container.id}:${action}`)
+    try {
+      const result = await containerAction.mutateAsync({
+        containerId: container.id,
+        hostId: selectedHostId,
+        action,
+        containerName: container.name,
+      })
+
+      if (result.ok) {
+        toast.push({
+          tone: 'success',
+          title: `${action} succeeded`,
+          description: `${container.name}: ${result.message}`,
+        })
+        await containersQuery.refetch()
+      } else {
+        toast.push({
+          tone: 'error',
+          title: `${action} failed`,
+          description:
+            result.error ?? result.message ?? `Could not ${action} container`,
+        })
+      }
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : `Failed to ${action} container`
+      toast.push({
+        tone: 'error',
+        title: `${action} failed`,
+        description: message,
+      })
+    } finally {
+      setBusyKey(null)
+    }
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-8">
@@ -38,7 +93,8 @@ export function DashboardPage() {
             Dashboard
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Connected Docker hosts and discovered containers. Read-only view.
+            Connected Docker hosts and containers. Start, stop, or restart from
+            the table.
           </p>
         </div>
         <Button
@@ -120,6 +176,8 @@ export function DashboardPage() {
         ) : (
           <ContainerTable
             containers={containersQuery.data?.containers ?? []}
+            busyKey={busyKey}
+            onAction={handleContainerAction}
           />
         )}
       </section>

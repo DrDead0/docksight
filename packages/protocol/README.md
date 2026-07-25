@@ -25,5 +25,11 @@ Used by:
 | `AGENT_HEARTBEAT` | `agent.heartbeat` |
 | `CONTAINER_LIST` | `container.list` |
 | `CONTAINER_LISTED` | `container.listed` |
+| `CONTAINER_START` | `container.start` |
+| `CONTAINER_STOP` | `container.stop` |
+| `CONTAINER_RESTART` | `container.restart` |
+| `CONTAINER_RESULT` | `container.result` |
 
-Reserved later: `logs`, `metrics`, `event`, `error`.
+Lifecycle commands and results always include `requestId` for correlation.
+
+Reserved later: `logs`, `metrics`, `event`, `error`, `container.remove`.

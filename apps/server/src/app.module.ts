@@ -4,6 +4,7 @@ import { AgentsModule } from './agents/agents.module';
 import { databaseConfig } from './common/database/database.config';
 import { PrismaModule } from './common/database/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
+import { ContainersModule } from './containers/containers.module';
 import { HostsModule } from './hosts/hosts.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { HostsModule } from './hosts/hosts.module';
     RedisModule,
     AgentsModule,
     HostsModule,
+    ContainersModule,
   ],
 })
 export class AppModule {}

@@ -4,7 +4,7 @@ Open-source Docker management and observability platform.
 
 DockSight helps developers and teams visually manage Docker environments, monitor containers, inspect logs, organize environments, and later connect multiple Docker hosts through lightweight agents.
 
-> Current increment: first read-only dashboard for Docker hosts and containers.
+> Current increment: container start / stop / restart from the dashboard.
 
 ## Architecture overview
 
@@ -14,7 +14,7 @@ DockSight is a monorepo with a modular-monolith backend:
 | --- | --- |
 | `apps/web` | React + Vite dashboard |
 | `apps/server` | NestJS API (Prisma, Redis, WebSockets, Swagger) |
-| `agent` | Go Docker host agent (WS registration + discovery) |
+| `agent` | Go Docker host agent (discovery + lifecycle) |
 | `packages/*` | Shared types, protocol, config, and utilities |
 | `infrastructure/` | Docker and deployment assets |
 | `docs/` | Architecture and ADRs |
@@ -96,7 +96,7 @@ npm run dev:server
 npm run dev:web
 ```
 
-### Run the agent (registration + Docker discovery)
+### Run the agent (discovery + lifecycle)
 
 ```bash
 # Terminal A — infrastructure
@@ -108,6 +108,9 @@ npm run dev:server
 # Terminal C — agent
 cd agent
 go run ./cmd/agent
+
+# Terminal D — web
+npm run dev:web
 ```
 
 Expected:
@@ -115,8 +118,9 @@ Expected:
 1. Agent connects to `ws://localhost:3000/agents`
 2. Agent registers (`agent.register` → `agent.registered`)
 3. Server sends `container.list`
-4. Agent queries Docker Engine and replies with `container.listed`
+4. Agent replies with `container.listed`
 5. Heartbeats continue every 30s
+6. Dashboard Start/Stop/Restart sends REST → WS command → `container.result`
 
 Protocol reference: [docs/protocol.md](docs/protocol.md)
 

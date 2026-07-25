@@ -31,12 +31,19 @@ export {
 } from './agent'
 
 export type {
+  ContainerAction,
+  ContainerCommandPayload,
   ContainerListMessage,
   ContainerListPayload,
   ContainerListedMessage,
   ContainerListedPayload,
   ContainerMessage,
   ContainerMessageType,
+  ContainerRestartMessage,
+  ContainerResultMessage,
+  ContainerResultPayload,
+  ContainerStartMessage,
+  ContainerStopMessage,
   ContainerSummary,
 } from './container'
 
@@ -44,6 +51,10 @@ export {
   CONTAINER_LIST,
   CONTAINER_LISTED,
   CONTAINER_MESSAGE_TYPE,
+  CONTAINER_RESTART,
+  CONTAINER_RESULT,
+  CONTAINER_START,
+  CONTAINER_STOP,
 } from './container'
 
 export type { ProtocolErrorCode } from './errors'

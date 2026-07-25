@@ -1,49 +1,44 @@
 # DockSight Agent
 
-Lightweight Go agent that runs beside a Docker host and registers with the DockSight backend.
+Lightweight Go agent that runs beside a Docker host, registers with the DockSight backend, and executes read + lifecycle Docker operations.
 
-## Current status (PI-007)
+## Current capabilities
 
-- Bootstrap, config, identity, logging, lifecycle
-- WebSocket registration with DockSight Server
+- Bootstrap: config, identity, logging, graceful shutdown
+- WebSocket registration with DockSight Server (`/agents`)
 - Heartbeats every 30s + automatic reconnect
+- Docker Engine discovery (`GetDockerInfo`, `ListContainers`)
+- Container lifecycle via Docker Go SDK:
+  - `StartContainer` / `StopContainer` / `RestartContainer`
+  - Handles `container.start` | `container.stop` | `container.restart`
+  - Replies with `container.result` (includes `requestId`)
 
-Docker Engine API integration is **not** implemented yet.
+Not implemented yet: remove container, logs streaming, metrics, auth/TLS.
 
 ## Structure
 
 ```
 agent/
-├── cmd/agent/
-├── config.yaml
+├── cmd/agent/              # Entrypoint
+├── config.yaml             # Local runtime config
+├── data/                   # Persisted identity (gitignored)
 └── internal/
-    ├── app/
-    ├── communication/   # WebSocket client (register + heartbeat)
-    ├── config/
-    ├── identity/
-    ├── lifecycle/
-    ├── logger/
-    └── version/
+    ├── app/                # Startup orchestration
+    ├── communication/      # WebSocket client
+    ├── config/             # YAML config loader
+    ├── docker/             # Docker Engine SDK client
+    ├── identity/           # UUID create/load
+    ├── lifecycle/          # SIGINT/SIGTERM handling
+    ├── logger/             # Structured logging
+    └── version/            # Agent version metadata
 ```
 
 ## Run
 
-1. Start infra + server:
-
 ```bash
 docker compose up -d
 npm run dev:server
+cd agent && go run ./cmd/agent
 ```
 
-2. Start the agent:
-
-```bash
-cd agent
-go run ./cmd/agent
-```
-
-WebSocket URL defaults to `ws://localhost:3000/agents` (`server.url` in `config.yaml`).
-
-Protocol specification (envelope, message types, future domains):
-
-- [docs/protocol.md](../docs/protocol.md)
+Protocol reference: [docs/protocol.md](../docs/protocol.md)

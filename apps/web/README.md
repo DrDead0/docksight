@@ -43,14 +43,18 @@ App: `http://localhost:5173`
 
 ## Dashboard feature
 
-Route `/` renders the first read-only dashboard:
+Route `/` renders the dashboard:
 
 - **Hosts** — cards for registered agents (`GET /api/hosts`)
 - **Containers** — table for the selected host (`GET /api/hosts/:id/containers`)
+- **Actions** — Start / Stop / Restart per container  
+  (`POST /api/containers/:id/start|stop|restart` with `{ hostId }`)
 
-No authentication or container actions in this increment.
+After a successful action the table refreshes. Toasts report success or failure.
 
-### Local stack
+No authentication, remove, logs, or metrics in this increment.
+
+### Local stack + lifecycle test
 
 ```bash
 # Terminal A — Postgres + Redis
@@ -59,21 +63,26 @@ docker compose up -d
 # Terminal B — API
 npm run dev:server
 
-# Terminal C — Agent (optional, for live host/container data)
+# Terminal C — Agent (required for actions)
 cd agent && go run ./cmd/agent
 
 # Terminal D — Web
 npm run dev:web
 ```
 
+1. Open http://localhost:5173
+2. Select the connected host
+3. Use **Start**, **Stop**, or **Restart** on a container
+4. Confirm the toast and updated status
+
 ## Project structure
 
 ```
 src/
 ├── app/                 # App shell, providers, routing
-├── components/          # Shared UI (StatusBadge, HostCard, ContainerTable, shadcn)
+├── components/          # Shared UI (StatusBadge, HostCard, ContainerTable, toasts)
 ├── features/dashboard/  # Dashboard page
-├── hooks/               # useHosts, useContainers
+├── hooks/               # useHosts, useContainers, useContainerAction
 ├── services/            # API client + hosts service
 ├── types/               # Frontend API types
 └── lib/                 # Shared utilities (e.g. cn)

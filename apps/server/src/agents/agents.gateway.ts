@@ -4,6 +4,7 @@ import {
   OnGatewayDisconnect,
   WebSocketGateway,
 } from '@nestjs/websockets';
+import { randomUUID } from 'crypto';
 import type { IncomingMessage } from 'http';
 import type { RawData } from 'ws';
 import WebSocket from 'ws';
@@ -13,11 +14,17 @@ import {
   AGENT_REGISTERED,
   CONTAINER_LIST,
   CONTAINER_LISTED,
+  CONTAINER_RESTART,
+  CONTAINER_RESULT,
+  CONTAINER_START,
+  CONTAINER_STOP,
   createEnvelope,
   isMessageEnvelope,
   type AgentHeartbeatPayload,
   type AgentRegisterPayload,
+  type ContainerAction,
   type ContainerListedPayload,
+  type ContainerResultPayload,
   type ContainerSummary,
   type MessageEnvelope,
 } from '@docksight/protocol';
@@ -34,6 +41,19 @@ type PendingList = {
   timer: ReturnType<typeof setTimeout>;
 };
 
+type PendingCommand = {
+  agentUuid: string;
+  resolve: (result: ContainerResultPayload) => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+};
+
+const COMMAND_TYPE: Record<ContainerAction, string> = {
+  start: CONTAINER_START,
+  stop: CONTAINER_STOP,
+  restart: CONTAINER_RESTART,
+};
+
 @WebSocketGateway({ path: '/agents' })
 export class AgentsGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -41,6 +61,7 @@ export class AgentsGateway
   private readonly logger = new Logger(AgentsGateway.name);
   private readonly socketsByUuid = new Map<string, AgentSocket>();
   private readonly pendingLists = new Map<string, PendingList>();
+  private readonly pendingCommands = new Map<string, PendingCommand>();
 
   constructor(
     private readonly agentsService: AgentsService,
@@ -73,6 +94,10 @@ export class AgentsGateway
         this.pendingLists.delete(uuid);
         pending.resolve(this.inventory.getByUuid(uuid)?.containers ?? []);
       }
+      this.rejectPendingCommandsForAgent(
+        uuid,
+        new Error('Agent disconnected before command completed'),
+      );
       await this.agentsService.markOffline(uuid);
     }
   }
@@ -111,6 +136,68 @@ export class AgentsGateway
       this.send(client, createEnvelope(CONTAINER_LIST, {}));
       this.logger.log(`Requested container.list from uuid=${agentUuid}`);
     });
+  }
+
+  /**
+   * Forward a lifecycle command to a connected agent and wait for container.result.
+   */
+  async sendContainerCommand(
+    agentUuid: string,
+    hostId: string,
+    action: ContainerAction,
+    containerId: string,
+    timeoutMs = 45_000,
+  ): Promise<ContainerResultPayload> {
+    this.inventory.rememberHost(hostId, agentUuid);
+
+    const client = this.socketsByUuid.get(agentUuid);
+    if (!client || client.readyState !== WebSocket.OPEN) {
+      throw new Error('Agent is not connected');
+    }
+
+    const requestId = randomUUID();
+    const type = COMMAND_TYPE[action];
+
+    return new Promise<ContainerResultPayload>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pendingCommands.delete(requestId);
+        reject(
+          new Error(
+            `Agent timed out waiting for container.result (${action})`,
+          ),
+        );
+      }, timeoutMs);
+
+      this.pendingCommands.set(requestId, {
+        agentUuid,
+        resolve,
+        reject,
+        timer,
+      });
+
+      this.send(
+        client,
+        createEnvelope(type, {
+          requestId,
+          containerId,
+        }),
+      );
+
+      this.logger.log(
+        `Sent ${type} requestId=${requestId} containerId=${containerId.slice(0, 12)} uuid=${agentUuid}`,
+      );
+    });
+  }
+
+  private rejectPendingCommandsForAgent(agentUuid: string, error: Error) {
+    for (const [requestId, pending] of this.pendingCommands.entries()) {
+      if (pending.agentUuid !== agentUuid) {
+        continue;
+      }
+      clearTimeout(pending.timer);
+      this.pendingCommands.delete(requestId);
+      pending.reject(error);
+    }
   }
 
   private async handleMessage(client: AgentSocket, data: RawData) {
@@ -156,6 +243,11 @@ export class AgentsGateway
           envelope.payload as ContainerListedPayload,
         );
         break;
+      case CONTAINER_RESULT:
+        this.handleContainerResult(
+          envelope.payload as ContainerResultPayload,
+        );
+        break;
       default:
         this.logger.warn(`Unknown agent message type: ${envelope.type}`);
     }
@@ -197,7 +289,6 @@ export class AgentsGateway
 
     this.send(client, createEnvelope(AGENT_REGISTERED, result));
 
-    // Kick off read-only container discovery after successful registration.
     this.send(client, createEnvelope(CONTAINER_LIST, {}));
     this.logger.log(`Sent container.list to agent uuid=${result.uuid}`);
   }
@@ -228,12 +319,6 @@ export class AgentsGateway
       `Received container.listed from uuid=${uuid ?? 'unknown'} count=${containers.length}`,
     );
 
-    for (const container of containers) {
-      this.logger.log(
-        `container id=${container.id?.slice(0, 12) ?? '?'} name=${container.name} image=${container.image} state=${container.state} status=${container.status}`,
-      );
-    }
-
     if (uuid) {
       this.inventory.setContainers(uuid, containers, client.agentId);
       const pending = this.pendingLists.get(uuid);
@@ -243,6 +328,37 @@ export class AgentsGateway
         pending.resolve(containers);
       }
     }
+  }
+
+  private handleContainerResult(payload: ContainerResultPayload) {
+    if (!payload?.requestId) {
+      this.logger.warn('Ignored container.result without requestId');
+      return;
+    }
+
+    const pending = this.pendingCommands.get(payload.requestId);
+    if (!pending) {
+      this.logger.warn(
+        `No pending command for container.result requestId=${payload.requestId}`,
+      );
+      return;
+    }
+
+    clearTimeout(pending.timer);
+    this.pendingCommands.delete(payload.requestId);
+
+    this.logger.log(
+      `Received container.result requestId=${payload.requestId} action=${payload.action} ok=${payload.ok}`,
+    );
+
+    pending.resolve({
+      requestId: payload.requestId,
+      action: payload.action,
+      containerId: payload.containerId,
+      ok: Boolean(payload.ok),
+      message: payload.message ?? '',
+      error: payload.error ?? null,
+    });
   }
 
   private send(client: WebSocket, envelope: MessageEnvelope) {

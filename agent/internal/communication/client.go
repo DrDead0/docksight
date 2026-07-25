@@ -15,11 +15,15 @@ import (
 )
 
 const (
-	TypeRegister         = "agent.register"
-	TypeRegistered       = "agent.registered"
-	TypeHeartbeat        = "agent.heartbeat"
-	TypeContainerList    = "container.list"
-	TypeContainerListed  = "container.listed"
+	TypeRegister        = "agent.register"
+	TypeRegistered      = "agent.registered"
+	TypeHeartbeat       = "agent.heartbeat"
+	TypeContainerList   = "container.list"
+	TypeContainerListed = "container.listed"
+	TypeContainerStart  = "container.start"
+	TypeContainerStop   = "container.stop"
+	TypeContainerRestart = "container.restart"
+	TypeContainerResult = "container.result"
 )
 
 // Envelope is the JSON message wrapper exchanged with the DockSight server.
@@ -62,6 +66,22 @@ type ContainerSummary struct {
 // ContainerListedPayload is sent on container.listed.
 type ContainerListedPayload struct {
 	Containers []ContainerSummary `json:"containers"`
+}
+
+// ContainerCommandPayload is shared by start/stop/restart.
+type ContainerCommandPayload struct {
+	RequestID   string `json:"requestId"`
+	ContainerID string `json:"containerId"`
+}
+
+// ContainerResultPayload is sent on container.result.
+type ContainerResultPayload struct {
+	RequestID   string  `json:"requestId"`
+	Action      string  `json:"action"`
+	ContainerID string  `json:"containerId"`
+	OK          bool    `json:"ok"`
+	Message     string  `json:"message"`
+	Error       *string `json:"error"`
 }
 
 // AgentInfo is local metadata included in registration.
@@ -184,7 +204,6 @@ func (c *Client) waitRegistered(conn *websocket.Conn, timeout time.Duration) (*R
 			continue
 		}
 
-		// Server may already send container.list; handle after register ack only.
 		if env.Type == TypeRegistered {
 			var payload RegisteredPayload
 			if err := json.Unmarshal(env.Payload, &payload); err != nil {
@@ -252,8 +271,9 @@ func (c *Client) handleServerMessage(ctx context.Context, conn *websocket.Conn, 
 	switch env.Type {
 	case TypeContainerList:
 		return c.handleContainerList(ctx, conn)
+	case TypeContainerStart, TypeContainerStop, TypeContainerRestart:
+		return c.handleContainerCommand(ctx, conn, env)
 	case TypeRegistered:
-		// Already handled during startup; ignore duplicates.
 		return nil
 	default:
 		logger.Warn("unknown server message type", "type", env.Type)
@@ -286,6 +306,84 @@ func (c *Client) handleContainerList(ctx context.Context, conn *websocket.Conn) 
 	return c.writeContainerListed(conn, summaries)
 }
 
+func (c *Client) handleContainerCommand(ctx context.Context, conn *websocket.Conn, env Envelope) error {
+	var payload ContainerCommandPayload
+	if err := json.Unmarshal(env.Payload, &payload); err != nil {
+		return fmt.Errorf("parse container command: %w", err)
+	}
+	if payload.RequestID == "" || payload.ContainerID == "" {
+		return c.writeContainerResult(conn, ContainerResultPayload{
+			RequestID:   payload.RequestID,
+			Action:      actionFromType(env.Type),
+			ContainerID: payload.ContainerID,
+			OK:          false,
+			Message:     "Invalid command payload",
+			Error:       strPtr("requestId and containerId are required"),
+		})
+	}
+
+	action := actionFromType(env.Type)
+	logger.Info("container command received",
+		"action", action,
+		"requestId", payload.RequestID,
+		"containerId", shortID(payload.ContainerID),
+	)
+
+	if c.docker == nil {
+		return c.writeContainerResult(conn, ContainerResultPayload{
+			RequestID:   payload.RequestID,
+			Action:      action,
+			ContainerID: payload.ContainerID,
+			OK:          false,
+			Message:     "Docker engine unavailable",
+			Error:       strPtr("docker client is not initialized"),
+		})
+	}
+
+	var err error
+	switch env.Type {
+	case TypeContainerStart:
+		err = c.docker.StartContainer(ctx, payload.ContainerID)
+	case TypeContainerStop:
+		err = c.docker.StopContainer(ctx, payload.ContainerID)
+	case TypeContainerRestart:
+		err = c.docker.RestartContainer(ctx, payload.ContainerID)
+	default:
+		err = fmt.Errorf("unsupported action %s", env.Type)
+	}
+
+	if err != nil {
+		msg := err.Error()
+		logger.Warn("container command failed",
+			"action", action,
+			"requestId", payload.RequestID,
+			"error", msg,
+		)
+		return c.writeContainerResult(conn, ContainerResultPayload{
+			RequestID:   payload.RequestID,
+			Action:      action,
+			ContainerID: payload.ContainerID,
+			OK:          false,
+			Message:     fmt.Sprintf("%s failed", action),
+			Error:       &msg,
+		})
+	}
+
+	logger.Info("container command succeeded",
+		"action", action,
+		"requestId", payload.RequestID,
+		"containerId", shortID(payload.ContainerID),
+	)
+	return c.writeContainerResult(conn, ContainerResultPayload{
+		RequestID:   payload.RequestID,
+		Action:      action,
+		ContainerID: payload.ContainerID,
+		OK:          true,
+		Message:     fmt.Sprintf("%s succeeded", action),
+		Error:       nil,
+	})
+}
+
 func (c *Client) writeContainerListed(conn *websocket.Conn, containers []ContainerSummary) error {
 	if containers == nil {
 		containers = []ContainerSummary{}
@@ -295,6 +393,14 @@ func (c *Client) writeContainerListed(conn *websocket.Conn, containers []Contain
 		return err
 	}
 	return c.write(conn, Envelope{Type: TypeContainerListed, Payload: payload})
+}
+
+func (c *Client) writeContainerResult(conn *websocket.Conn, result ContainerResultPayload) error {
+	payload, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	return c.write(conn, Envelope{Type: TypeContainerResult, Payload: payload})
 }
 
 func (c *Client) sendHeartbeat(conn *websocket.Conn) error {
@@ -313,4 +419,28 @@ func (c *Client) write(conn *websocket.Conn, env Envelope) error {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
 	return conn.WriteMessage(websocket.TextMessage, data)
+}
+
+func actionFromType(msgType string) string {
+	switch msgType {
+	case TypeContainerStart:
+		return "start"
+	case TypeContainerStop:
+		return "stop"
+	case TypeContainerRestart:
+		return "restart"
+	default:
+		return "unknown"
+	}
+}
+
+func shortID(id string) string {
+	if len(id) > 12 {
+		return id[:12]
+	}
+	return id
+}
+
+func strPtr(value string) *string {
+	return &value
 }

@@ -24,3 +24,14 @@ export type HostContainersResponse = {
   containers: Container[]
   updatedAt: string | null
 }
+
+export type ContainerAction = 'start' | 'stop' | 'restart'
+
+export type ContainerActionResult = {
+  requestId: string
+  action: ContainerAction
+  containerId: string
+  ok: boolean
+  message: string
+  error: string | null
+}

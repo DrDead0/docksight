@@ -2,22 +2,19 @@ package docker
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net"
-	"net/http"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/Microsoft/go-winio"
+	"github.com/docker/docker/client"
 )
 
-// Client talks to Docker Engine over the local socket / named pipe.
+// Client wraps the Docker Engine Go SDK with a platform-aware dialer.
 type Client struct {
-	http   *http.Client
+	sdk    *client.Client
 	socket string
 }
 
@@ -27,19 +24,29 @@ func NewClient(socket string) (*Client, error) {
 		socket = DefaultSocket()
 	}
 
-	transport := &http.Transport{
-		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+	opts := []client.Opt{
+		client.WithHost(engineHost(socket)),
+		client.WithAPIVersionNegotiation(),
+		// Apply after WithHost so we override any transport dialer ConfigureTransport set.
+		client.WithDialContext(func(ctx context.Context, _, _ string) (net.Conn, error) {
 			return dialDocker(ctx, socket)
-		},
+		}),
+	}
+
+	sdk, err := client.NewClientWithOpts(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("docker sdk client: %w", err)
 	}
 
 	return &Client{
+		sdk:    sdk,
 		socket: socket,
-		http: &http.Client{
-			Transport: transport,
-			Timeout:   20 * time.Second,
-		},
 	}, nil
+}
+
+// SDK returns the underlying Docker Engine API client.
+func (c *Client) SDK() *client.Client {
+	return c.sdk
 }
 
 // DefaultSocket returns the platform Docker Engine endpoint path.
@@ -50,6 +57,19 @@ func DefaultSocket() string {
 	return "/var/run/docker.sock"
 }
 
+func engineHost(socket string) string {
+	if runtime.GOOS == "windows" {
+		if socket == "" || socket == `\\.\pipe\docker_engine` {
+			return client.DefaultDockerHost
+		}
+		return "npipe://" + socket
+	}
+	if socket == "" {
+		socket = "/var/run/docker.sock"
+	}
+	return "unix://" + socket
+}
+
 func dialDocker(ctx context.Context, socket string) (net.Conn, error) {
 	if runtime.GOOS == "windows" {
 		return winio.DialPipeContext(ctx, socket)
@@ -58,10 +78,12 @@ func dialDocker(ctx context.Context, socket string) (net.Conn, error) {
 	return d.DialContext(ctx, "unix", socket)
 }
 
-// Close releases HTTP resources.
+// Close releases SDK resources.
 func (c *Client) Close() error {
-	c.http.CloseIdleConnections()
-	return nil
+	if c.sdk == nil {
+		return nil
+	}
+	return c.sdk.Close()
 }
 
 // Socket returns the configured engine socket path.
@@ -76,29 +98,4 @@ func SocketExists(socket string) bool {
 	}
 	_, err := os.Stat(socket)
 	return err == nil
-}
-
-func (c *Client) getJSON(ctx context.Context, path string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://docker"+path, nil)
-	if err != nil {
-		return err
-	}
-
-	res, err := c.http.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return fmt.Errorf("docker api %s: status %d: %s", path, res.StatusCode, strings.TrimSpace(string(body)))
-	}
-	if out == nil {
-		return nil
-	}
-	return json.Unmarshal(body, out)
 }
