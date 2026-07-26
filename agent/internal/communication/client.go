@@ -10,20 +10,24 @@ import (
 
 	"docksight-agent/internal/docker"
 	"docksight-agent/internal/logger"
+	"docksight-agent/internal/logs"
 
 	"github.com/gorilla/websocket"
 )
 
 const (
-	TypeRegister        = "agent.register"
-	TypeRegistered      = "agent.registered"
-	TypeHeartbeat       = "agent.heartbeat"
-	TypeContainerList   = "container.list"
-	TypeContainerListed = "container.listed"
-	TypeContainerStart  = "container.start"
-	TypeContainerStop   = "container.stop"
+	TypeRegister         = "agent.register"
+	TypeRegistered       = "agent.registered"
+	TypeHeartbeat        = "agent.heartbeat"
+	TypeContainerList    = "container.list"
+	TypeContainerListed  = "container.listed"
+	TypeContainerStart   = "container.start"
+	TypeContainerStop    = "container.stop"
 	TypeContainerRestart = "container.restart"
-	TypeContainerResult = "container.result"
+	TypeContainerResult  = "container.result"
+	TypeLogsSubscribe    = "logs.subscribe"
+	TypeLogsUnsubscribe  = "logs.unsubscribe"
+	TypeLogsChunk        = "logs.chunk"
 )
 
 // Envelope is the JSON message wrapper exchanged with the DockSight server.
@@ -84,6 +88,26 @@ type ContainerResultPayload struct {
 	Error       *string `json:"error"`
 }
 
+// LogsSubscribePayload is received on logs.subscribe.
+type LogsSubscribePayload struct {
+	RequestID   string `json:"requestId"`
+	ContainerID string `json:"containerId"`
+	Tail        int    `json:"tail"`
+	Follow      *bool  `json:"follow"`
+}
+
+// LogsUnsubscribePayload is received on logs.unsubscribe.
+type LogsUnsubscribePayload struct {
+	RequestID string `json:"requestId"`
+}
+
+// LogsChunkPayload is sent on logs.chunk.
+type LogsChunkPayload struct {
+	RequestID   string       `json:"requestId"`
+	ContainerID string       `json:"containerId"`
+	Entries     []logs.Entry `json:"entries"`
+}
+
 // AgentInfo is local metadata included in registration.
 type AgentInfo struct {
 	UUID         string
@@ -98,20 +122,65 @@ type Client struct {
 	serverURL      string
 	info           AgentInfo
 	docker         *docker.Service
+	logs           *logs.Service
 	heartbeatEvery time.Duration
 	reconnectWait  time.Duration
 	writeMu        sync.Mutex
+	connMu         sync.RWMutex
+	conn           *websocket.Conn
 }
 
 // NewClient creates a reconnecting agent communication client.
-func NewClient(serverURL string, info AgentInfo, dockerService *docker.Service) *Client {
-	return &Client{
+func NewClient(
+	serverURL string,
+	info AgentInfo,
+	dockerService *docker.Service,
+	logsService *logs.Service,
+) *Client {
+	c := &Client{
 		serverURL:      serverURL,
 		info:           info,
 		docker:         dockerService,
+		logs:           logsService,
 		heartbeatEvery: 30 * time.Second,
 		reconnectWait:  5 * time.Second,
 	}
+	if logsService != nil {
+		logsService.SetEmitter(c)
+	}
+	return c
+}
+
+// EmitLogChunk implements logs.ChunkEmitter.
+func (c *Client) EmitLogChunk(chunk logs.Chunk) error {
+	c.connMu.RLock()
+	conn := c.conn
+	c.connMu.RUnlock()
+	if conn == nil {
+		return fmt.Errorf("emit log chunk: websocket not connected")
+	}
+
+	payload, err := json.Marshal(LogsChunkPayload{
+		RequestID:   chunk.RequestID,
+		ContainerID: chunk.ContainerID,
+		Entries:     chunk.Entries,
+	})
+	if err != nil {
+		return fmt.Errorf("emit log chunk: %w", err)
+	}
+	return c.write(conn, Envelope{Type: TypeLogsChunk, Payload: payload})
+}
+
+func (c *Client) setConn(conn *websocket.Conn) {
+	c.connMu.Lock()
+	defer c.connMu.Unlock()
+	c.conn = conn
+}
+
+func (c *Client) clearConn() {
+	c.connMu.Lock()
+	defer c.connMu.Unlock()
+	c.conn = nil
 }
 
 // Run connects, registers, heartbeats, handles commands, and reconnects until ctx is cancelled.
@@ -150,6 +219,13 @@ func (c *Client) session(ctx context.Context) error {
 		return fmt.Errorf("websocket dial: %w", err)
 	}
 	defer conn.Close()
+	c.setConn(conn)
+	defer c.clearConn()
+	defer func() {
+		if c.logs != nil {
+			c.logs.UnsubscribeAll()
+		}
+	}()
 
 	logger.Info("websocket connected", "url", c.serverURL)
 	logger.Printf("Connected\n")
@@ -273,12 +349,67 @@ func (c *Client) handleServerMessage(ctx context.Context, conn *websocket.Conn, 
 		return c.handleContainerList(ctx, conn)
 	case TypeContainerStart, TypeContainerStop, TypeContainerRestart:
 		return c.handleContainerCommand(ctx, conn, env)
+	case TypeLogsSubscribe:
+		return c.handleLogsSubscribe(env)
+	case TypeLogsUnsubscribe:
+		return c.handleLogsUnsubscribe(env)
 	case TypeRegistered:
 		return nil
 	default:
 		logger.Warn("unknown server message type", "type", env.Type)
 		return nil
 	}
+}
+
+func (c *Client) handleLogsSubscribe(env Envelope) error {
+	var payload LogsSubscribePayload
+	if err := json.Unmarshal(env.Payload, &payload); err != nil {
+		return fmt.Errorf("parse logs.subscribe: %w", err)
+	}
+	if payload.RequestID == "" || payload.ContainerID == "" {
+		return fmt.Errorf("logs.subscribe: requestId and containerId are required")
+	}
+	if c.logs == nil {
+		return fmt.Errorf("logs.subscribe: logs service unavailable")
+	}
+
+	follow := true
+	if payload.Follow != nil {
+		follow = *payload.Follow
+	}
+	tail := payload.Tail
+	if tail <= 0 {
+		tail = 100
+	}
+
+	logger.Info("logs.subscribe received",
+		"requestId", payload.RequestID,
+		"containerId", shortID(payload.ContainerID),
+		"tail", tail,
+		"follow", follow,
+	)
+
+	return c.logs.Subscribe(logs.SubscribeOptions{
+		RequestID:   payload.RequestID,
+		ContainerID: payload.ContainerID,
+		Tail:        tail,
+		Follow:      follow,
+	})
+}
+
+func (c *Client) handleLogsUnsubscribe(env Envelope) error {
+	var payload LogsUnsubscribePayload
+	if err := json.Unmarshal(env.Payload, &payload); err != nil {
+		return fmt.Errorf("parse logs.unsubscribe: %w", err)
+	}
+	if c.logs == nil {
+		return fmt.Errorf("logs.unsubscribe: logs service unavailable")
+	}
+	logger.Info("logs.unsubscribe received", "requestId", payload.RequestID)
+	if err := c.logs.Unsubscribe(payload.RequestID); err != nil {
+		logger.Warn("logs.unsubscribe failed", "requestId", payload.RequestID, "error", err.Error())
+	}
+	return nil
 }
 
 func (c *Client) handleContainerList(ctx context.Context, conn *websocket.Conn) error {

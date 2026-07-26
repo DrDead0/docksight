@@ -47,10 +47,10 @@ Route `/` renders the dashboard:
 
 - **Hosts** — cards for registered agents (`GET /api/hosts`)
 - **Containers** — table for the selected host (`GET /api/hosts/:id/containers`)
-- **Actions** — Start / Stop / Restart per container  
-  (`POST /api/containers/:id/start|stop|restart` with `{ hostId }`)
+- **Actions** — Start / Stop / Restart / Logs  
+  (`POST /api/containers/:id/start|stop|restart`, SSE `GET /api/containers/:id/logs?hostId=...`)
 
-After a successful action the table refreshes. Toasts report success or failure.
+After a successful action the table refreshes. Toasts report success or failure. **Logs** opens a live panel (historical tail + follow); closing it unsubscribes the stream.
 
 No authentication, remove, logs, or metrics in this increment.
 

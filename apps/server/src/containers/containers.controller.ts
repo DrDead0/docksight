@@ -4,13 +4,24 @@ import {
   Controller,
   GatewayTimeoutException,
   HttpException,
+  MessageEvent,
   NotFoundException,
   Param,
   Post,
+  Query,
+  Sse,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ApiBody, ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProperty,
+  ApiTags,
+} from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
+import { Observable, finalize } from 'rxjs';
+import type { LogsChunkPayload } from '@docksight/protocol';
 import { ContainersService } from './containers.service';
 
 class ContainerActionBodyDto {
@@ -56,6 +67,83 @@ export class ContainersController {
     @Body() body: ContainerActionBodyDto,
   ) {
     return this.runAction(containerId, body.hostId, 'restart');
+  }
+
+  @Sse(':id/logs')
+  @ApiOperation({
+    summary: 'Stream container logs (SSE)',
+    description:
+      'Opens a live log stream via the connected agent. Query: hostId (required), tail, follow.',
+  })
+  streamLogs(
+    @Param('id') containerId: string,
+    @Query('hostId') hostId: string,
+    @Query('tail') tailRaw?: string,
+    @Query('follow') followRaw?: string,
+  ): Observable<MessageEvent> {
+    if (!hostId?.trim()) {
+      throw new BadRequestException('hostId query parameter is required');
+    }
+
+    const tail = Number.parseInt(tailRaw ?? '100', 10);
+    const follow = followRaw !== 'false';
+
+    return new Observable<MessageEvent>((subscriber) => {
+      let requestId: string | null = null;
+      let closed = false;
+
+      const onChunk = (payload: LogsChunkPayload) => {
+        if (closed) {
+          return;
+        }
+        subscriber.next({
+          type: 'logs.chunk',
+          data: payload,
+        } as MessageEvent);
+      };
+
+      void this.containersService
+        .startLogStream({
+          hostId,
+          containerId,
+          tail: Number.isFinite(tail) && tail > 0 ? tail : 100,
+          follow,
+          onChunk,
+        })
+        .then((id) => {
+          requestId = id;
+          subscriber.next({
+            type: 'logs.subscribed',
+            data: { requestId: id, containerId },
+          } as MessageEvent);
+        })
+        .catch((error: unknown) => {
+          const message =
+            error instanceof Error ? error.message : 'Failed to start log stream';
+          subscriber.error(this.mapStreamError(message));
+        });
+
+      return () => {
+        closed = true;
+        if (requestId) {
+          this.containersService.stopLogStream(requestId);
+        }
+      };
+    }).pipe(
+      finalize(() => {
+        // teardown also handled by Observable unsubscribe return
+      }),
+    );
+  }
+
+  private mapStreamError(message: string): HttpException {
+    if (message.includes('not found')) {
+      return new NotFoundException(message);
+    }
+    if (message.includes('not connected') || message.includes('offline')) {
+      return new ServiceUnavailableException(message);
+    }
+    return new BadRequestException(message);
   }
 
   private async runAction(

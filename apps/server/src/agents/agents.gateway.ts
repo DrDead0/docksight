@@ -18,6 +18,9 @@ import {
   CONTAINER_RESULT,
   CONTAINER_START,
   CONTAINER_STOP,
+  LOGS_CHUNK,
+  LOGS_SUBSCRIBE,
+  LOGS_UNSUBSCRIBE,
   createEnvelope,
   isMessageEnvelope,
   type AgentHeartbeatPayload,
@@ -26,6 +29,7 @@ import {
   type ContainerListedPayload,
   type ContainerResultPayload,
   type ContainerSummary,
+  type LogsChunkPayload,
   type MessageEnvelope,
 } from '@docksight/protocol';
 import { AgentsService } from './agents.service';
@@ -48,6 +52,12 @@ type PendingCommand = {
   timer: ReturnType<typeof setTimeout>;
 };
 
+type LogSubscriber = {
+  agentUuid: string;
+  containerId: string;
+  onChunk: (payload: LogsChunkPayload) => void;
+};
+
 const COMMAND_TYPE: Record<ContainerAction, string> = {
   start: CONTAINER_START,
   stop: CONTAINER_STOP,
@@ -62,6 +72,7 @@ export class AgentsGateway
   private readonly socketsByUuid = new Map<string, AgentSocket>();
   private readonly pendingLists = new Map<string, PendingList>();
   private readonly pendingCommands = new Map<string, PendingCommand>();
+  private readonly logSubscribers = new Map<string, LogSubscriber>();
 
   constructor(
     private readonly agentsService: AgentsService,
@@ -98,6 +109,7 @@ export class AgentsGateway
         uuid,
         new Error('Agent disconnected before command completed'),
       );
+      this.unsubscribeLogsForAgent(uuid);
       await this.agentsService.markOffline(uuid);
     }
   }
@@ -189,6 +201,85 @@ export class AgentsGateway
     });
   }
 
+  /**
+   * Ask an agent to stream container logs; chunks are delivered via onChunk.
+   * Returns the correlation requestId used for unsubscribe.
+   */
+  startLogStream(options: {
+    agentUuid: string;
+    hostId: string;
+    containerId: string;
+    tail?: number;
+    follow?: boolean;
+    onChunk: (payload: LogsChunkPayload) => void;
+  }): string {
+    const {
+      agentUuid,
+      hostId,
+      containerId,
+      tail = 100,
+      follow = true,
+      onChunk,
+    } = options;
+
+    this.inventory.rememberHost(hostId, agentUuid);
+
+    const client = this.socketsByUuid.get(agentUuid);
+    if (!client || client.readyState !== WebSocket.OPEN) {
+      throw new Error('Agent is not connected');
+    }
+
+    const requestId = randomUUID();
+    this.logSubscribers.set(requestId, {
+      agentUuid,
+      containerId,
+      onChunk,
+    });
+
+    this.send(
+      client,
+      createEnvelope(LOGS_SUBSCRIBE, {
+        requestId,
+        containerId,
+        tail,
+        follow,
+      }),
+    );
+
+    this.logger.log(
+      `Sent logs.subscribe requestId=${requestId} containerId=${containerId.slice(0, 12)} uuid=${agentUuid}`,
+    );
+
+    return requestId;
+  }
+
+  stopLogStream(requestId: string) {
+    const subscriber = this.logSubscribers.get(requestId);
+    if (!subscriber) {
+      return;
+    }
+    this.logSubscribers.delete(requestId);
+
+    const client = this.socketsByUuid.get(subscriber.agentUuid);
+    if (client && client.readyState === WebSocket.OPEN) {
+      this.send(
+        client,
+        createEnvelope(LOGS_UNSUBSCRIBE, { requestId }),
+      );
+    }
+
+    this.logger.log(`Sent logs.unsubscribe requestId=${requestId}`);
+  }
+
+  private unsubscribeLogsForAgent(agentUuid: string) {
+    for (const [requestId, subscriber] of this.logSubscribers.entries()) {
+      if (subscriber.agentUuid !== agentUuid) {
+        continue;
+      }
+      this.logSubscribers.delete(requestId);
+    }
+  }
+
   private rejectPendingCommandsForAgent(agentUuid: string, error: Error) {
     for (const [requestId, pending] of this.pendingCommands.entries()) {
       if (pending.agentUuid !== agentUuid) {
@@ -247,6 +338,9 @@ export class AgentsGateway
         this.handleContainerResult(
           envelope.payload as ContainerResultPayload,
         );
+        break;
+      case LOGS_CHUNK:
+        this.handleLogsChunk(envelope.payload as LogsChunkPayload);
         break;
       default:
         this.logger.warn(`Unknown agent message type: ${envelope.type}`);
@@ -358,6 +452,27 @@ export class AgentsGateway
       ok: Boolean(payload.ok),
       message: payload.message ?? '',
       error: payload.error ?? null,
+    });
+  }
+
+  private handleLogsChunk(payload: LogsChunkPayload) {
+    if (!payload?.requestId) {
+      this.logger.warn('Ignored logs.chunk without requestId');
+      return;
+    }
+
+    const subscriber = this.logSubscribers.get(payload.requestId);
+    if (!subscriber) {
+      this.logger.warn(
+        `No subscriber for logs.chunk requestId=${payload.requestId}`,
+      );
+      return;
+    }
+
+    subscriber.onChunk({
+      requestId: payload.requestId,
+      containerId: payload.containerId,
+      entries: Array.isArray(payload.entries) ? payload.entries : [],
     });
   }
 

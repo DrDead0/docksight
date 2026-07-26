@@ -320,6 +320,84 @@ Same payload shape for `container.stop` and `container.restart`.
 
 ---
 
+### 5.8 `logs.subscribe`
+
+- **Direction:** Server → Agent  
+- **When:** A dashboard client opens a container log stream  
+- **Purpose:** Stream historical + live container logs (not persisted)
+
+```json
+{
+  "type": "logs.subscribe",
+  "payload": {
+    "requestId": "req-123",
+    "containerId": "abc123",
+    "tail": 100,
+    "follow": true
+  }
+}
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `requestId` | `string` | yes | Correlation id for chunks / unsubscribe |
+| `containerId` | `string` | yes | Docker container id |
+| `tail` | `number` | no | Historical lines to send first (default `100`) |
+| `follow` | `boolean` | no | Continue live streaming (default `true`) |
+
+---
+
+### 5.9 `logs.chunk`
+
+- **Direction:** Agent → Server  
+- **When:** While a subscribe stream is active  
+- **Purpose:** Deliver batched log entries
+
+```json
+{
+  "type": "logs.chunk",
+  "payload": {
+    "requestId": "req-123",
+    "containerId": "abc123",
+    "entries": [
+      {
+        "timestamp": "2026-07-25T10:00:00Z",
+        "stream": "stdout",
+        "message": "Application started"
+      }
+    ]
+  }
+}
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `requestId` | `string` | yes | Same id as `logs.subscribe` |
+| `containerId` | `string` | yes | Container id |
+| `entries` | `array` | yes | Batched lines (up to ~50 or ~200ms) |
+| `entries[].timestamp` | `string` | yes | RFC3339 / RFC3339Nano |
+| `entries[].stream` | `string` | yes | `stdout` or `stderr` |
+| `entries[].message` | `string` | yes | Log line body |
+
+---
+
+### 5.10 `logs.unsubscribe`
+
+- **Direction:** Server → Agent  
+- **When:** Client closes the log view / SSE disconnects  
+- **Purpose:** Stop only that stream and release Docker reader resources
+
+```json
+{
+  "type": "logs.unsubscribe",
+  "payload": {
+    "requestId": "req-123"
+  }
+}
+```
+
+---
+
 ## 6. Reserved message types (not implemented yet)
 
 These types are reserved so future work does not invent incompatible shapes. Payloads below are **draft contracts** and may gain fields, but type names SHOULD stay stable.
@@ -352,45 +430,7 @@ Beyond list/lifecycle (`list`, `listed`, `start`, `stop`, `restart`, `result`), 
 | `container.inspected` | Agent → Server | Inspect result |
 | `container.remove` | Server → Agent | Remove container |
 
-### 6.3 Logs
-
-| Type | Direction | Purpose |
-| --- | --- | --- |
-| `logs.subscribe` | Server → Agent | Begin streaming logs |
-| `logs.unsubscribe` | Server → Agent | Stop streaming |
-| `logs.chunk` | Agent → Server | Log lines batch |
-
-Draft subscribe:
-
-```json
-{
-  "type": "logs.subscribe",
-  "payload": {
-    "requestId": "req_456",
-    "containerId": "abc123def456",
-    "follow": true,
-    "tail": 100,
-    "timestamps": true
-  }
-}
-```
-
-Draft chunk:
-
-```json
-{
-  "type": "logs.chunk",
-  "payload": {
-    "requestId": "req_456",
-    "containerId": "abc123def456",
-    "lines": [
-      { "stream": "stdout", "time": "2026-07-23T22:00:00Z", "message": "listening on :8080" }
-    ]
-  }
-}
-```
-
-### 6.4 Metrics
+### 6.3 Metrics
 
 | Type | Direction | Purpose |
 | --- | --- | --- |
@@ -422,7 +462,7 @@ Draft sample:
 }
 ```
 
-### 6.5 Events
+### 6.4 Events
 
 | Type | Direction | Purpose |
 | --- | --- | --- |

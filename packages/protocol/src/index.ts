@@ -57,5 +57,25 @@ export {
   CONTAINER_STOP,
 } from './container'
 
+export type {
+  LogEntry,
+  LogStreamName,
+  LogsChunkMessage,
+  LogsChunkPayload,
+  LogsMessage,
+  LogsMessageType,
+  LogsSubscribeMessage,
+  LogsSubscribePayload,
+  LogsUnsubscribeMessage,
+  LogsUnsubscribePayload,
+} from './logs'
+
+export {
+  LOGS_CHUNK,
+  LOGS_MESSAGE_TYPE,
+  LOGS_SUBSCRIBE,
+  LOGS_UNSUBSCRIBE,
+} from './logs'
+
 export type { ProtocolErrorCode } from './errors'
 export { ERROR_DOMAIN, PROTOCOL_ERROR_CODE } from './errors'

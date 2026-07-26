@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -116,6 +117,37 @@ func (s *Service) Ping(ctx context.Context) error {
 		return fmt.Errorf("docker ping: %w", err)
 	}
 	return nil
+}
+
+// ContainerLogs opens a Docker log reader for the given container.
+// Caller owns the returned ReadCloser and must close it.
+// When follow is true, the stream continues until ctx is cancelled or the reader is closed.
+func (s *Service) ContainerLogs(
+	ctx context.Context,
+	containerID string,
+	tail string,
+	follow bool,
+) (io.ReadCloser, error) {
+	if containerID == "" {
+		return nil, fmt.Errorf("docker logs: container id is required")
+	}
+	if tail == "" {
+		tail = "100"
+	}
+
+	opts := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     follow,
+		Timestamps: true,
+		Tail:       tail,
+	}
+
+	reader, err := s.client.sdk.ContainerLogs(ctx, containerID, opts)
+	if err != nil {
+		return nil, fmt.Errorf("docker logs %s: %w", shortID(containerID), err)
+	}
+	return reader, nil
 }
 
 func shortID(id string) string {

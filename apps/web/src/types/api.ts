@@ -35,3 +35,9 @@ export type ContainerActionResult = {
   message: string
   error: string | null
 }
+
+export type LogEntry = {
+  timestamp: string
+  stream: string
+  message: string
+}

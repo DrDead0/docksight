@@ -29,7 +29,10 @@ Used by:
 | `CONTAINER_STOP` | `container.stop` |
 | `CONTAINER_RESTART` | `container.restart` |
 | `CONTAINER_RESULT` | `container.result` |
+| `LOGS_SUBSCRIBE` | `logs.subscribe` |
+| `LOGS_CHUNK` | `logs.chunk` |
+| `LOGS_UNSUBSCRIBE` | `logs.unsubscribe` |
 
-Lifecycle commands and results always include `requestId` for correlation.
+Lifecycle and log streams always include `requestId` for correlation.
 
-Reserved later: `logs`, `metrics`, `event`, `error`, `container.remove`.
+Reserved later: `metrics`, `event`, `error`, `container.remove`.

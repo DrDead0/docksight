@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LoaderCircle, Play, RotateCcw, Square } from 'lucide-react'
+import { LoaderCircle, Play, RotateCcw, ScrollText, Square } from 'lucide-react'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import type { Container, ContainerAction } from '@/types/api'
@@ -8,6 +8,7 @@ type ContainerTableProps = {
   containers: Container[]
   busyKey?: string | null
   onAction?: (container: Container, action: ContainerAction) => void
+  onViewLogs?: (container: Container) => void
 }
 
 function isRunning(container: Container): boolean {
@@ -19,6 +20,7 @@ export function ContainerTable({
   containers,
   busyKey = null,
   onAction,
+  onViewLogs,
 }: ContainerTableProps) {
   if (containers.length === 0) {
     return (
@@ -30,7 +32,7 @@ export function ContainerTable({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
+      <table className="w-full min-w-[48rem] border-collapse text-left text-sm">
         <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-4 py-3 font-medium">Name</th>
@@ -82,6 +84,12 @@ export function ContainerTable({
                       disabled={!running || rowBusy || !onAction}
                       loading={rowBusy && busyAction === 'restart'}
                       onClick={() => onAction?.(container, 'restart')}
+                    />
+                    <ActionButton
+                      label="Logs"
+                      icon={<ScrollText className="h-3.5 w-3.5" aria-hidden />}
+                      disabled={!onViewLogs}
+                      onClick={() => onViewLogs?.(container)}
                     />
                   </div>
                 </td>

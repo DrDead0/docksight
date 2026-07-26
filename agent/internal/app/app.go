@@ -12,6 +12,7 @@ import (
 	"docksight-agent/internal/identity"
 	"docksight-agent/internal/lifecycle"
 	"docksight-agent/internal/logger"
+	"docksight-agent/internal/logs"
 	"docksight-agent/internal/version"
 )
 
@@ -29,7 +30,7 @@ func New(configPath string) *App {
 }
 
 // Run executes the agent lifecycle:
-// config → logger → identity → docker check → connect → register → heartbeat → wait.
+// config → logger → identity → docker → logs → connect → register → heartbeat → wait.
 func (a *App) Run() error {
 	cfg, err := config.Load(a.configPath)
 	if err != nil {
@@ -81,6 +82,11 @@ func (a *App) Run() error {
 		logger.Warn("docker socket not found", "socket", socket)
 	}
 
+	var logsService *logs.Service
+	if dockerService != nil {
+		logsService = logs.NewService(dockerService)
+	}
+
 	hostname, _ := os.Hostname()
 	if hostname == "" {
 		hostname = "unknown"
@@ -95,7 +101,7 @@ func (a *App) Run() error {
 		OS:           runtime.GOOS,
 		Architecture: runtime.GOARCH,
 		Version:      version.Version,
-	}, dockerService)
+	}, dockerService, logsService)
 
 	go client.Run(lc.Context())
 
@@ -104,6 +110,9 @@ func (a *App) Run() error {
 		"agentId", id.ID,
 	)
 	lc.Wait(func() {
+		if logsService != nil {
+			logsService.Close()
+		}
 		if dockerClient != nil {
 			_ = dockerClient.Close()
 		}

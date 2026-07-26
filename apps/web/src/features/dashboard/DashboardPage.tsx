@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Container, RefreshCw } from 'lucide-react'
+import { ContainerLogsPanel } from '@/components/ContainerLogsPanel'
 import { ContainerTable } from '@/components/ContainerTable'
 import { HostCard } from '@/components/HostCard'
 import { useToast } from '@/components/ToastProvider'
@@ -16,6 +17,7 @@ export function DashboardPage() {
   const hosts = hostsQuery.data ?? []
   const [selectedHostId, setSelectedHostId] = useState<string | undefined>()
   const [busyKey, setBusyKey] = useState<string | null>(null)
+  const [logsContainer, setLogsContainer] = useState<ContainerRow | null>(null)
 
   useEffect(() => {
     if (hosts.length === 0) {
@@ -24,6 +26,7 @@ export function DashboardPage() {
     }
     if (!selectedHostId || !hosts.some((host) => host.id === selectedHostId)) {
       setSelectedHostId(hosts[0].id)
+      setLogsContainer(null)
     }
   }, [hosts, selectedHostId])
 
@@ -93,8 +96,8 @@ export function DashboardPage() {
             Dashboard
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Connected Docker hosts and containers. Start, stop, or restart from
-            the table.
+            Connected Docker hosts and containers. Start, stop, restart, or open
+            live logs from the table.
           </p>
         </div>
         <Button
@@ -178,8 +181,17 @@ export function DashboardPage() {
             containers={containersQuery.data?.containers ?? []}
             busyKey={busyKey}
             onAction={handleContainerAction}
+            onViewLogs={setLogsContainer}
           />
         )}
+
+        {selectedHostId && logsContainer ? (
+          <ContainerLogsPanel
+            hostId={selectedHostId}
+            container={logsContainer}
+            onClose={() => setLogsContainer(null)}
+          />
+        ) : null}
       </section>
     </div>
   )
