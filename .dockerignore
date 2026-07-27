@@ -18,3 +18,9 @@ apps/web/dist
 apps/server/dist
 apps/server/coverage
 **/node_modules
+
+# Build artifacts and generated code — always produced inside the image so a
+# host-built copy can never leak in.
+**/dist
+apps/server/generated
+apps/server/.env
