@@ -1,27 +1,35 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { Container } from 'lucide-react'
+import { AppShell } from '@/components/layout/AppShell'
+import { ContainersPage } from '@/features/containers/ContainersPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { HostDetailsPage } from '@/features/hosts/HostDetailsPage'
+import { HostsPage } from '@/features/hosts/HostsPage'
+import {
+  ImagesPage,
+  NetworksPage,
+  VolumesPage,
+} from '@/features/inventory/InventoryPages'
+import { MetricsPage } from '@/features/metrics/MetricsPage'
+import { SettingsPage } from '@/features/settings/SettingsPage'
 
 export function App() {
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <header className="border-b border-border px-6 py-4">
-          <div className="mx-auto flex max-w-6xl items-center gap-3">
-            <Container className="h-6 w-6 text-primary" aria-hidden />
-            <span className="text-lg font-semibold tracking-tight">
-              DockSight
-            </span>
-          </div>
-        </header>
-
-        <main className="flex flex-1 flex-col">
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <AppShell>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/hosts" element={<HostsPage />} />
+          <Route path="/hosts/:hostId" element={<HostDetailsPage />} />
+          <Route path="/containers" element={<ContainersPage />} />
+          <Route path="/images" element={<ImagesPage />} />
+          <Route path="/networks" element={<NetworksPage />} />
+          <Route path="/volumes" element={<VolumesPage />} />
+          <Route path="/metrics" element={<MetricsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AppShell>
     </BrowserRouter>
   )
 }

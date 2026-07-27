@@ -1,242 +1,258 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Container, RefreshCw } from 'lucide-react'
-import { ContainerInspectPanel } from '@/components/ContainerInspectPanel'
-import { ContainerLogsPanel } from '@/components/ContainerLogsPanel'
-import { ContainerTable } from '@/components/ContainerTable'
+import { useNavigate } from 'react-router-dom'
+import {
+  Activity,
+  Boxes,
+  Container as ContainerIcon,
+  Cpu,
+  RefreshCw,
+  Server,
+} from 'lucide-react'
+import { PageContainer, PageHeader, SectionHeader } from '@/components/layout/AppShell'
+import { ContainerInspectDrawer } from '@/components/ContainerInspectDrawer'
+import { ContainerLogsDrawer } from '@/components/ContainerLogsDrawer'
+import { ContainerTable, type ContainerRow } from '@/components/ContainerTable'
 import { HostCard } from '@/components/HostCard'
-import { useToast } from '@/components/ToastProvider'
+import { StatTile } from '@/components/StatTile'
+import { Sparkline } from '@/components/charts/Sparkline'
+import { MockBadge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useContainerAction } from '@/hooks/useContainerAction'
-import { useContainers } from '@/hooks/useContainers'
+import { CardGridSkeleton, TableSkeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/ui/empty-state'
+import { useContainerCommands } from '@/hooks/useContainerCommands'
+import { useHostInventory } from '@/hooks/useHostInventory'
 import { useHosts } from '@/hooks/useHosts'
+import { mockHostResources } from '@/lib/mock'
 import { ApiError } from '@/services/api'
-import type { Container as ContainerRow, ContainerAction } from '@/types/api'
+import { useState } from 'react'
 
 export function DashboardPage() {
-  const toast = useToast()
+  const navigate = useNavigate()
   const hostsQuery = useHosts()
   const hosts = hostsQuery.data ?? []
-  const [selectedHostId, setSelectedHostId] = useState<string | undefined>()
-  const [busyKey, setBusyKey] = useState<string | null>(null)
-  const [inspectContainer, setInspectContainer] = useState<ContainerRow | null>(
-    null,
-  )
-  const [logsContainer, setLogsContainer] = useState<ContainerRow | null>(null)
+  const inventory = useHostInventory(hosts)
 
-  useEffect(() => {
-    if (hosts.length === 0) {
-      setSelectedHostId(undefined)
-      return
-    }
-    if (!selectedHostId || !hosts.some((host) => host.id === selectedHostId)) {
-      setSelectedHostId(hosts[0].id)
-      setInspectContainer(null)
-      setLogsContainer(null)
-    }
-  }, [hosts, selectedHostId])
+  const [inspecting, setInspecting] = useState<ContainerRow | null>(null)
+  const [viewingLogs, setViewingLogs] = useState<ContainerRow | null>(null)
+  const commands = useContainerCommands(undefined, () => inventory.refetchAll())
 
-  const containersQuery = useContainers(selectedHostId)
-  const containerAction = useContainerAction()
-  const selectedHost = useMemo(
-    () => hosts.find((host) => host.id === selectedHostId),
-    [hosts, selectedHostId],
-  )
+  const onlineHosts = hosts.filter((host) => host.status === 'ONLINE')
+  const totalContainers = inventory.all.length
+  const runningContainers = inventory.all.filter(
+    (container) => container.state?.toLowerCase() === 'running',
+  ).length
 
-  const onlineCount = hosts.filter((host) => host.status === 'ONLINE').length
+  // MOCK: fleet CPU is averaged from placeholder host resources.
+  const fleetCpu =
+    hosts.length > 0
+      ? hosts.reduce(
+          (total, host) => total + mockHostResources(host.id).cpuPercent,
+          0,
+        ) / hosts.length
+      : 0
+  const fleetSeries =
+    hosts.length > 0 ? mockHostResources(hosts[0].id).cpuSeries : []
 
-  async function handleContainerAction(
-    container: ContainerRow,
-    action: ContainerAction,
-  ) {
-    if (!selectedHostId) {
-      return
-    }
-
-    setBusyKey(`${container.id}:${action}`)
-    try {
-      const result = await containerAction.mutateAsync({
-        containerId: container.id,
-        hostId: selectedHostId,
-        action,
-        containerName: container.name,
-      })
-
-      if (result.ok) {
-        toast.push({
-          tone: 'success',
-          title: `${action} succeeded`,
-          description: `${container.name}: ${result.message}`,
-        })
-        await containersQuery.refetch()
-      } else {
-        toast.push({
-          tone: 'error',
-          title: `${action} failed`,
-          description:
-            result.error ?? result.message ?? `Could not ${action} container`,
-        })
-      }
-    } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : `Failed to ${action} container`
-      toast.push({
-        tone: 'error',
-        title: `${action} failed`,
-        description: message,
-      })
-    } finally {
-      setBusyKey(null)
-    }
-  }
+  const refreshing = hostsQuery.isFetching || inventory.isFetching
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-8">
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Dashboard
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Connected Docker hosts and containers. Start, stop, restart, or open
-            live logs from the table.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            void hostsQuery.refetch()
-            void containersQuery.refetch()
-          }}
-          disabled={hostsQuery.isFetching || containersQuery.isFetching}
-        >
-          <RefreshCw
-            className={
-              hostsQuery.isFetching || containersQuery.isFetching
-                ? 'h-4 w-4 animate-spin'
-                : 'h-4 w-4'
-            }
-            aria-hidden
-          />
-          Refresh
-        </Button>
-      </section>
+    <PageContainer>
+      <PageHeader
+        title="Dashboard"
+        description="Fleet overview for every Docker host with a connected DockSight agent."
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              void hostsQuery.refetch()
+              inventory.refetchAll()
+            }}
+            disabled={refreshing}
+          >
+            <RefreshCw
+              className={refreshing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'}
+              aria-hidden
+            />
+            Refresh
+          </Button>
+        }
+      />
 
-      <section className="space-y-4" aria-labelledby="hosts-heading">
-        <div className="flex items-center justify-between gap-3">
-          <h2 id="hosts-heading" className="text-lg font-medium tracking-tight">
-            Hosts
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            {hosts.length} registered · {onlineCount} online
-          </p>
-        </div>
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label="Hosts"
+          value={hostsQuery.isLoading ? '—' : hosts.length}
+          hint={`${onlineHosts.length} online · ${hosts.length - onlineHosts.length} offline`}
+          icon={Server}
+        />
+        <StatTile
+          label="Containers"
+          value={inventory.isLoading ? '—' : totalContainers}
+          hint="Across all connected hosts"
+          icon={ContainerIcon}
+        />
+        <StatTile
+          label="Running"
+          value={inventory.isLoading ? '—' : runningContainers}
+          hint={`${totalContainers - runningContainers} not running`}
+          icon={Activity}
+          tone="success"
+        />
+        <StatTile
+          label="Avg. host CPU"
+          value={`${Math.round(fleetCpu)}%`}
+          hint={
+            <span className="inline-flex items-center gap-1.5">
+              <MockBadge title="Host metrics are not reported by the agent yet" />
+              placeholder
+            </span>
+          }
+          icon={Cpu}
+          chart={<Sparkline values={fleetSeries} />}
+        />
+      </div>
+
+      <section className="mb-8">
+        <SectionHeader
+          title="Hosts"
+          description="Agent connection state, inventory and resource usage."
+          actions={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/hosts')}
+            >
+              View all
+            </Button>
+          }
+        />
 
         {hostsQuery.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading hosts…</p>
+          <CardGridSkeleton />
         ) : hostsQuery.isError ? (
           <ErrorNotice error={hostsQuery.error} label="hosts" />
         ) : hosts.length === 0 ? (
           <EmptyHosts />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {hosts.map((host) => (
-              <HostCard
-                key={host.id}
-                host={host}
-                selected={host.id === selectedHostId}
-                onSelect={setSelectedHostId}
-              />
-            ))}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {hosts.slice(0, 6).map((host) => {
+              const entry = inventory.byHostId.get(host.id)
+              return (
+                <HostCard
+                  key={host.id}
+                  host={host}
+                  containerCount={entry?.total}
+                  runningCount={entry?.running}
+                  countsLoading={entry?.isLoading}
+                  onRefresh={() => inventory.refetchAll()}
+                />
+              )
+            })}
           </div>
         )}
       </section>
 
-      <section className="space-y-4" aria-labelledby="containers-heading">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <h2
-            id="containers-heading"
-            className="text-lg font-medium tracking-tight"
-          >
-            Containers
-          </h2>
-          {selectedHost ? (
-            <p className="text-xs text-muted-foreground">
-              Showing discovery for{' '}
-              <span className="text-foreground">{selectedHost.hostname}</span>
-            </p>
-          ) : null}
-        </div>
+      <section>
+        <SectionHeader
+          title="Containers"
+          description="Every container reported by the connected agents."
+          actions={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/containers')}
+            >
+              Open containers
+            </Button>
+          }
+        />
 
-        {!selectedHostId ? (
-          <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-            Select a host to view containers.
-          </div>
-        ) : containersQuery.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading containers…</p>
-        ) : containersQuery.isError ? (
-          <ErrorNotice error={containersQuery.error} label="containers" />
+        {inventory.isLoading ? (
+          <TableSkeleton />
+        ) : hosts.length === 0 ? (
+          <EmptyState
+            illustration="containers"
+            title="No containers to show"
+            description="Connect an agent first — container inventory is pulled live from each host."
+          />
         ) : (
           <ContainerTable
-            containers={containersQuery.data?.containers ?? []}
-            busyKey={busyKey}
-            onAction={handleContainerAction}
-            onInspect={setInspectContainer}
-            onViewLogs={setLogsContainer}
+            containers={inventory.all}
+            showHostColumn
+            busyKey={commands.busyKey}
+            onAction={commands.run}
+            onInspect={setInspecting}
+            onViewLogs={setViewingLogs}
           />
         )}
-
-        {selectedHostId && inspectContainer ? (
-          <ContainerInspectPanel
-            hostId={selectedHostId}
-            container={inspectContainer}
-            onClose={() => setInspectContainer(null)}
-          />
-        ) : null}
-
-        {selectedHostId && logsContainer ? (
-          <ContainerLogsPanel
-            hostId={selectedHostId}
-            container={logsContainer}
-            onClose={() => setLogsContainer(null)}
-          />
-        ) : null}
       </section>
-    </div>
+
+      {inspecting?.hostId ? (
+        <ContainerInspectDrawer
+          hostId={inspecting.hostId}
+          container={inspecting}
+          busyKey={commands.busyKey}
+          onAction={commands.run}
+          onViewLogs={(container) => {
+            setInspecting(null)
+            setViewingLogs(container)
+          }}
+          onClose={() => setInspecting(null)}
+        />
+      ) : null}
+
+      {viewingLogs?.hostId ? (
+        <ContainerLogsDrawer
+          hostId={viewingLogs.hostId}
+          container={viewingLogs}
+          onClose={() => setViewingLogs(null)}
+        />
+      ) : null}
+    </PageContainer>
   )
 }
 
-function EmptyHosts() {
+export function EmptyHosts() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border px-4 py-12 text-center">
-      <Container className="h-8 w-8 text-muted-foreground" aria-hidden />
-      <div className="space-y-1">
-        <p className="font-medium">No hosts connected</p>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Start the DockSight agent against this server. Registered agents
-          appear here as Docker hosts.
-        </p>
-      </div>
-    </div>
+    <EmptyState
+      illustration="hosts"
+      title="No hosts connected"
+      description={
+        <>
+          Run the DockSight agent on a Docker host and point it at this server.
+          Registered agents appear here automatically.
+        </>
+      }
+      action={
+        <code className="rounded-md border border-border bg-secondary px-3 py-1.5 font-mono text-xs text-foreground">
+          docksight-agent --server ws://localhost:3000
+        </code>
+      }
+    />
   )
 }
 
-function ErrorNotice({ error, label }: { error: unknown; label: string }) {
+export function ErrorNotice({
+  error,
+  label,
+}: {
+  error: unknown
+  label: string
+}) {
   const message =
-    error instanceof ApiError
+    error instanceof ApiError || error instanceof Error
       ? error.message
-      : error instanceof Error
-        ? error.message
-        : `Failed to load ${label}`
+      : `Failed to load ${label}`
 
   return (
-    <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-      {message}
+    <div className="flex items-start gap-3 rounded-lg border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger">
+      <Boxes className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+      <div>
+        <p className="font-medium">Could not load {label}</p>
+        <p className="mt-0.5 opacity-90">{message}</p>
+      </div>
     </div>
   )
 }

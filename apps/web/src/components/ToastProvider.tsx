@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export type ToastTone = 'success' | 'error' | 'info'
 
@@ -17,6 +19,18 @@ type ToastContextValue = {
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null)
+
+const TONE_ICON = {
+  success: CheckCircle2,
+  error: AlertTriangle,
+  info: Info,
+} as const
+
+const TONE_STYLE: Record<ToastTone, string> = {
+  success: 'text-success',
+  error: 'text-danger',
+  info: 'text-primary',
+}
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -43,37 +57,41 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-full max-w-sm flex-col gap-2 px-4 sm:px-0"
+        className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2 sm:w-full"
         aria-live="polite"
       >
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={
-              toast.tone === 'success'
-                ? 'pointer-events-auto rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-4 py-3 text-sm text-emerald-100 shadow-lg'
-                : toast.tone === 'error'
-                  ? 'pointer-events-auto rounded-lg border border-rose-500/30 bg-rose-500/15 px-4 py-3 text-sm text-rose-100 shadow-lg'
-                  : 'pointer-events-auto rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground shadow-lg'
-            }
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-medium">{toast.title}</p>
+        {toasts.map((toast) => {
+          const Icon = TONE_ICON[toast.tone]
+          return (
+            <div
+              key={toast.id}
+              className="animate-pop-in pointer-events-auto flex items-start gap-3 rounded-lg border border-border bg-popover px-4 py-3 shadow-lg"
+            >
+              <Icon
+                className={cn('mt-0.5 h-4 w-4 shrink-0', TONE_STYLE[toast.tone])}
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  {toast.title}
+                </p>
                 {toast.description ? (
-                  <p className="mt-1 text-xs opacity-90">{toast.description}</p>
+                  <p className="mt-0.5 break-words text-xs text-muted-foreground">
+                    {toast.description}
+                  </p>
                 ) : null}
               </div>
               <button
                 type="button"
-                className="text-xs opacity-70 hover:opacity-100"
+                aria-label="Dismiss notification"
+                className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 onClick={() => dismiss(toast.id)}
               >
-                Dismiss
+                <X className="h-3.5 w-3.5" aria-hidden />
               </button>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </ToastContext.Provider>
   )
