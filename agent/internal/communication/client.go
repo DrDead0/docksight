@@ -16,18 +16,20 @@ import (
 )
 
 const (
-	TypeRegister         = "agent.register"
-	TypeRegistered       = "agent.registered"
-	TypeHeartbeat        = "agent.heartbeat"
-	TypeContainerList    = "container.list"
-	TypeContainerListed  = "container.listed"
-	TypeContainerStart   = "container.start"
-	TypeContainerStop    = "container.stop"
-	TypeContainerRestart = "container.restart"
-	TypeContainerResult  = "container.result"
-	TypeLogsSubscribe    = "logs.subscribe"
-	TypeLogsUnsubscribe  = "logs.unsubscribe"
-	TypeLogsChunk        = "logs.chunk"
+	TypeRegister           = "agent.register"
+	TypeRegistered         = "agent.registered"
+	TypeHeartbeat          = "agent.heartbeat"
+	TypeContainerList      = "container.list"
+	TypeContainerListed    = "container.listed"
+	TypeContainerInspect   = "container.inspect"
+	TypeContainerInspected = "container.inspected"
+	TypeContainerStart     = "container.start"
+	TypeContainerStop      = "container.stop"
+	TypeContainerRestart   = "container.restart"
+	TypeContainerResult    = "container.result"
+	TypeLogsSubscribe      = "logs.subscribe"
+	TypeLogsUnsubscribe    = "logs.unsubscribe"
+	TypeLogsChunk          = "logs.chunk"
 )
 
 // Envelope is the JSON message wrapper exchanged with the DockSight server.
@@ -72,6 +74,12 @@ type ContainerListedPayload struct {
 	Containers []ContainerSummary `json:"containers"`
 }
 
+type ContainerInspectedPayload struct {
+	RequestID string            `json:"requestId"`
+	Container *docker.ContainerInspect `json:"container"`
+	Ok bool  `json:"ok"`
+	Error *string `json:"error"`
+}
 // ContainerCommandPayload is shared by start/stop/restart.
 type ContainerCommandPayload struct {
 	RequestID   string `json:"requestId"`
@@ -355,6 +363,8 @@ func (c *Client) handleServerMessage(ctx context.Context, conn *websocket.Conn, 
 		return c.handleLogsUnsubscribe(env)
 	case TypeRegistered:
 		return nil
+    case TypeContainerInspect:
+		return c.handleContainerInspect(ctx, conn, env)
 	default:
 		logger.Warn("unknown server message type", "type", env.Type)
 		return nil
@@ -526,6 +536,22 @@ func (c *Client) writeContainerListed(conn *websocket.Conn, containers []Contain
 	return c.write(conn, Envelope{Type: TypeContainerListed, Payload: payload})
 }
 
+func (c *Client) writeContainerInspected(
+	conn *websocket.Conn,
+	result ContainerInspectedPayload,
+) error {
+
+	payload, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	return c.write(conn, Envelope{
+		Type:    TypeContainerInspected,
+		Payload: payload,
+	})
+}
+
 func (c *Client) writeContainerResult(conn *websocket.Conn, result ContainerResultPayload) error {
 	payload, err := json.Marshal(result)
 	if err != nil {
@@ -574,4 +600,50 @@ func shortID(id string) string {
 
 func strPtr(value string) *string {
 	return &value
+}
+
+func (c *Client) handleContainerInspect(ctx context.Context, conn *websocket.Conn, env Envelope) error {
+	var payload ContainerCommandPayload
+	if err := json.Unmarshal(env.Payload, &payload); err != nil {
+		return fmt.Errorf("parse container.inspect: %w", err)
+	}
+
+	if payload.RequestID == "" || payload.ContainerID == "" {
+		return c.writeContainerInspected(conn, ContainerInspectedPayload{
+			RequestID: payload.RequestID,
+			Container: nil,
+			Ok: false,
+			Error: strPtr("requestId and containerId are required"),		
+
+		})
+}
+
+if c.docker == nil {
+	return c.writeContainerInspected(conn, ContainerInspectedPayload{
+		RequestID: payload.RequestID,
+		Container: nil,
+		Ok: false,
+		Error: strPtr("Docker engine unavailable"),
+	})
+
+}
+
+    container, err := c.docker.InspectContainer(
+		ctx,
+		payload.ContainerID,
+	)
+
+	if err != nil {
+
+		msg := err.Error()
+
+		return c.writeContainerInspected(conn, ContainerInspectedPayload{
+			RequestID: payload.RequestID,
+			Error: &msg,
+		})
+	}
+	return c.writeContainerInspected(conn, ContainerInspectedPayload{
+		RequestID: payload.RequestID,
+		Container: container,
+	})
 }

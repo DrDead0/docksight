@@ -7,7 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 )
 
 // Service provides Docker Engine discovery and lifecycle helpers.
@@ -155,4 +158,109 @@ func shortID(id string) string {
 		return id[:12]
 	}
 	return id
+}
+func (s *Service) validate() error {
+	if s == nil {
+		return fmt.Errorf("docker service is nil")
+	}
+
+	if s.client == nil {
+		return fmt.Errorf("docker client is nil")
+	}
+
+	if s.client.sdk == nil {
+		return fmt.Errorf("docker sdk client is nil")
+	}
+
+	return nil
+}
+func parseDockerTime(value string) time.Time {
+	if value == "" {
+		return time.Time{}
+	}
+
+	t, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return time.Time{}
+	}
+
+	return t
+}
+func mapContainerPorts(ports nat.PortMap) []Port {
+	result := make([]Port, 0, len(ports))
+	for port, bindings := range ports {
+		for _, binding := range bindings {
+			result = append(result, Port{
+				Private:  int(port.Int()),
+				Public:   binding.HostPort,
+				Protocol: string(port.Proto()),
+			})
+		}
+	}
+	return result
+}
+func mapContainerMounts(mounts []types.MountPoint) []Mount {
+	result := make([]Mount, 0, len(mounts))
+	for _, mount := range mounts {
+		result = append(result, Mount{
+
+
+			Source: mount.Source,
+			Target: mount.Destination,
+			Mode:   mount.Mode,
+		})
+	}
+	return result
+}
+func mapContainerNetworks(networks map[string]*network.EndpointSettings) []Network {
+	result := make([]Network, 0, len(networks))
+	for name, settings := range networks {
+		result = append(result, Network{
+			Name: name,
+			IP: settings.IPAddress,
+		})
+	}
+	return result
+}	
+
+
+func mapContainerInspect(container types.ContainerJSON) *ContainerInspect {
+	return &ContainerInspect{
+		ID: container.ID,
+		ShortID: shortID(container.ID),
+		Name: container.Name,
+		Image: container.Config.Image,
+		State: State{
+			Status: container.State.Status,
+			Running: container.State.Running,
+			Paused: container.State.Paused,
+			Restarting: container.State.Restarting,
+		},
+		Created: parseDockerTime(container.Created),
+		StartedAt: parseDockerTime(container.State.StartedAt),
+		Ports: mapContainerPorts(container.NetworkSettings.Ports),
+		Mounts: mapContainerMounts(container.Mounts),
+		Networks: mapContainerNetworks(container.NetworkSettings.Networks),
+		WorkingDir: container.Config.WorkingDir,
+		Cmd: container.Config.Cmd,
+		RestartPolicy: string(container.HostConfig.RestartPolicy.Name),
+		
+	}
+}
+
+
+func (s *Service) InspectContainer(ctx context.Context, containerID string) (*ContainerInspect, error) {
+
+	if err := s.validate(); err != nil {
+		return nil, err
+	}
+	
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	containerJSON, err := s.client.sdk.ContainerInspect(ctx, containerID)
+	if err != nil {
+		return nil, fmt.Errorf("docker inspect %s: %w", shortID(containerID), err)
+	}
+	return mapContainerInspect(containerJSON), nil
 }
