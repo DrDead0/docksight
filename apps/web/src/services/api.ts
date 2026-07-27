@@ -1,3 +1,5 @@
+import { clearToken, getToken } from '@/services/tokenStorage'
+
 export class ApiError extends Error {
   readonly status: number
   readonly body: unknown
@@ -43,12 +45,20 @@ function extractErrorMessage(body: unknown, status: number): string {
   return `Request failed with status ${status}`
 }
 
+type RequestOptions = {
+  /** Skip the Authorization header — used by /auth/login and /setup/*. */
+  anonymous?: boolean
+}
+
 async function request<T>(
   method: 'GET' | 'POST',
   path: string,
   body?: unknown,
+  options: RequestOptions = {},
 ): Promise<T> {
   const url = `${resolveBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`
+  // Read through the storage abstraction — no component touches localStorage.
+  const token = options.anonymous ? null : getToken()
 
   let response: Response
   try {
@@ -57,6 +67,7 @@ async function request<T>(
       headers: {
         Accept: 'application/json',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
@@ -69,6 +80,12 @@ async function request<T>(
   const parsed = await parseBody(response)
 
   if (!response.ok) {
+    // A rejected token is dead weight: drop it so the UI can react (via
+    // onTokenChange) instead of retrying with a credential the server refuses.
+    if (response.status === 401 && token) {
+      clearToken()
+    }
+
     throw new ApiError(
       extractErrorMessage(parsed, response.status),
       response.status,
@@ -79,12 +96,19 @@ async function request<T>(
   return parsed as T
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  return request<T>('GET', path)
+export async function apiGet<T>(
+  path: string,
+  options?: RequestOptions,
+): Promise<T> {
+  return request<T>('GET', path, undefined, options)
 }
 
-export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>('POST', path, body ?? {})
+export async function apiPost<T>(
+  path: string,
+  body?: unknown,
+  options?: RequestOptions,
+): Promise<T> {
+  return request<T>('POST', path, body ?? {}, options)
 }
 
 export const apiClient = {

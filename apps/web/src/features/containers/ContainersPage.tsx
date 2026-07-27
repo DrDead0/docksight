@@ -10,6 +10,7 @@ import { EmptyHosts, ErrorNotice } from '@/features/dashboard/DashboardPage'
 import { useContainerCommands } from '@/hooks/useContainerCommands'
 import { useHostInventory } from '@/hooks/useHostInventory'
 import { useHosts } from '@/hooks/useHosts'
+import { useIsAdmin } from '@/stores/auth'
 
 export function ContainersPage() {
   const hostsQuery = useHosts()
@@ -19,6 +20,7 @@ export function ContainersPage() {
   const [inspecting, setInspecting] = useState<ContainerRow | null>(null)
   const [viewingLogs, setViewingLogs] = useState<ContainerRow | null>(null)
   const commands = useContainerCommands(undefined, () => inventory.refetchAll())
+  const isAdmin = useIsAdmin()
 
   const refreshing = hostsQuery.isFetching || inventory.isFetching
 
@@ -56,6 +58,7 @@ export function ContainersPage() {
         <ContainerTable
           containers={inventory.all}
           showHostColumn
+          canManage={isAdmin}
           busyKey={commands.busyKey}
           onAction={commands.run}
           onInspect={setInspecting}
@@ -68,6 +71,7 @@ export function ContainersPage() {
         <ContainerInspectDrawer
           hostId={inspecting.hostId}
           container={inspecting}
+          canManage={isAdmin}
           busyKey={commands.busyKey}
           onAction={commands.run}
           onViewLogs={(container) => {

@@ -37,6 +37,11 @@ type ContainerTableProps = {
   containers: ContainerRow[]
   busyKey?: string | null
   showHostColumn?: boolean
+  /**
+   * Whether the signed-in user may run lifecycle actions. Cosmetic only — the
+   * API enforces the ADMIN role on start/stop/restart regardless.
+   */
+  canManage?: boolean
   onAction?: (container: ContainerRow, action: ContainerAction) => void
   onInspect?: (container: ContainerRow) => void
   onViewLogs?: (container: ContainerRow) => void
@@ -44,10 +49,13 @@ type ContainerTableProps = {
   emptyDescription?: string
 }
 
+const NEEDS_ADMIN = 'Requires the ADMIN role'
+
 export function ContainerTable({
   containers,
   busyKey = null,
   showHostColumn = false,
+  canManage = true,
   onAction,
   onInspect,
   onViewLogs,
@@ -274,21 +282,24 @@ export function ContainerTable({
                           <IconAction
                             label="Start"
                             icon={Play}
-                            disabled={running || rowBusy || !onAction}
+                            disabled={running || rowBusy || !onAction || !canManage}
+                            title={canManage ? undefined : NEEDS_ADMIN}
                             loading={rowBusy && busyAction === 'start'}
                             onClick={() => onAction?.(container, 'start')}
                           />
                           <IconAction
                             label="Stop"
                             icon={Square}
-                            disabled={!running || rowBusy || !onAction}
+                            disabled={!running || rowBusy || !onAction || !canManage}
+                            title={canManage ? undefined : NEEDS_ADMIN}
                             loading={rowBusy && busyAction === 'stop'}
                             onClick={() => onAction?.(container, 'stop')}
                           />
                           <IconAction
                             label="Restart"
                             icon={RotateCcw}
-                            disabled={!running || rowBusy || !onAction}
+                            disabled={!running || rowBusy || !onAction || !canManage}
+                            title={canManage ? undefined : NEEDS_ADMIN}
                             loading={rowBusy && busyAction === 'restart'}
                             onClick={() => onAction?.(container, 'restart')}
                           />
@@ -312,6 +323,8 @@ export function ContainerTable({
                               <div onClick={(event) => event.stopPropagation()}>
                                 <RowMenuItems
                                   container={container}
+                                  canManage={canManage}
+                                  onAction={onAction}
                                   onInspect={onInspect}
                                   onViewLogs={onViewLogs}
                                   close={close}
@@ -353,6 +366,7 @@ export function ContainerTable({
             >
               <RowMenuItems
                 container={contextMenu.container}
+                canManage={canManage}
                 onInspect={onInspect}
                 onViewLogs={onViewLogs}
                 onAction={onAction}
@@ -368,12 +382,14 @@ export function ContainerTable({
 
 function RowMenuItems({
   container,
+  canManage = true,
   onInspect,
   onViewLogs,
   onAction,
   close,
 }: {
   container: ContainerRow
+  canManage?: boolean
   onInspect?: (container: ContainerRow) => void
   onViewLogs?: (container: ContainerRow) => void
   onAction?: (container: ContainerRow, action: ContainerAction) => void
@@ -406,7 +422,7 @@ function RowMenuItems({
           <DropdownSeparator />
           <DropdownItem
             icon={<Play className="h-4 w-4" />}
-            disabled={running}
+            disabled={running || !canManage}
             onSelect={() => {
               onAction(container, 'start')
               close()
@@ -416,7 +432,7 @@ function RowMenuItems({
           </DropdownItem>
           <DropdownItem
             icon={<Square className="h-4 w-4" />}
-            disabled={!running}
+            disabled={!running || !canManage}
             onSelect={() => {
               onAction(container, 'stop')
               close()
@@ -426,7 +442,7 @@ function RowMenuItems({
           </DropdownItem>
           <DropdownItem
             icon={<RotateCcw className="h-4 w-4" />}
-            disabled={!running}
+            disabled={!running || !canManage}
             onSelect={() => {
               onAction(container, 'restart')
               close()
@@ -434,6 +450,11 @@ function RowMenuItems({
           >
             Restart
           </DropdownItem>
+          {!canManage ? (
+            <p className="px-2.5 pb-1 text-[11px] text-muted-foreground">
+              {NEEDS_ADMIN}
+            </p>
+          ) : null}
         </>
       ) : null}
       <DropdownSeparator />
@@ -525,12 +546,14 @@ function IconAction({
   icon: Icon,
   disabled,
   loading,
+  title,
   onClick,
 }: {
   label: string
   icon: typeof Play
   disabled?: boolean
   loading?: boolean
+  title?: string
   onClick: () => void
 }) {
   return (
@@ -540,7 +563,7 @@ function IconAction({
       size="icon-sm"
       disabled={disabled}
       aria-label={label}
-      title={label}
+      title={title ?? label}
       onClick={(event: MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation()
         onClick()

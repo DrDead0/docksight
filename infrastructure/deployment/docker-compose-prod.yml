@@ -1,0 +1,100 @@
+# DockSight local development infrastructure
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — primary relational database for DockSight
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    container_name: docksight-postgres
+    labels:
+      com.docksight.internal: "true"
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-docksight}
+      POSTGRES_USER: ${POSTGRES_USER:-docksight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docksight-password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - docksight-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-docksight} -d ${POSTGRES_DB:-docksight}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Redis — cache / pub-sub placeholder for realtime features
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: docksight-redis
+    labels:
+      com.docksight.internal: "true"
+    restart: unless-stopped
+   
+    volumes:
+      - redis-data:/data
+    networks:
+      - docksight-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  server:
+    image: gchr.io/docksight/server:latest
+    container_name: docksight-server
+    labels:
+      com.docksight.internal: "true"
+    environment:
+      DATABASE_URL: postgres://docksight:docksight-password@postgres:5432/docksight
+      REDIS_HOST: redis
+      PORT: 8080
+    depends_on:
+      - postgres
+      - redis
+  
+  web:
+    image: gchr.io/docksight/web:latest
+    container_name: docksight-web
+    labels:
+      com.docksight.internal: "true"
+    networks:
+      - docksight-network
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: docksight-nginx
+    labels:
+      com.docksight.internal: "true"
+    ports:
+      - "${DOCKSIGHT_PORT:-2002}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+      - server
+
+# ---------------------------------------------------------------------------
+# Named volumes — persist data across container restarts
+# ---------------------------------------------------------------------------
+volumes:
+  postgres-data:
+  redis-data:
+
+# ---------------------------------------------------------------------------
+# Dedicated network for DockSight development services
+# ---------------------------------------------------------------------------
+networks:
+  docksight-network:
+    name: docksight-network
+    driver: bridge

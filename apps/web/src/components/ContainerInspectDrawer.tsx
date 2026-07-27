@@ -23,6 +23,8 @@ import { ApiError } from '@/services/api'
 import type { ContainerAction } from '@/types/api'
 import type { ContainerRow } from '@/components/ContainerTable'
 
+const NEEDS_ADMIN = 'Requires the ADMIN role'
+
 type ContainerInspectDrawerProps = {
   hostId: string
   container: ContainerRow | null
@@ -30,6 +32,8 @@ type ContainerInspectDrawerProps = {
   onViewLogs?: (container: ContainerRow) => void
   onAction?: (container: ContainerRow, action: ContainerAction) => void
   busyKey?: string | null
+  /** Cosmetic gate; the API still enforces ADMIN on lifecycle routes. */
+  canManage?: boolean
 }
 
 export function ContainerInspectDrawer({
@@ -39,6 +43,7 @@ export function ContainerInspectDrawer({
   onViewLogs,
   onAction,
   busyKey = null,
+  canManage = true,
 }: ContainerInspectDrawerProps) {
   const inspectQuery = useContainerInspect(
     hostId,
@@ -104,7 +109,8 @@ export function ContainerInspectDrawer({
             type="button"
             size="sm"
             variant="outline"
-            disabled={running || rowBusy || !onAction}
+            title={canManage ? undefined : NEEDS_ADMIN}
+            disabled={running || rowBusy || !onAction || !canManage}
             onClick={() => onAction?.(container, 'start')}
           >
             <Play className="h-3.5 w-3.5" aria-hidden />
@@ -114,7 +120,8 @@ export function ContainerInspectDrawer({
             type="button"
             size="sm"
             variant="outline"
-            disabled={!running || rowBusy || !onAction}
+            title={canManage ? undefined : NEEDS_ADMIN}
+            disabled={!running || rowBusy || !onAction || !canManage}
             onClick={() => onAction?.(container, 'stop')}
           >
             <Square className="h-3.5 w-3.5" aria-hidden />
@@ -124,7 +131,8 @@ export function ContainerInspectDrawer({
             type="button"
             size="sm"
             variant="outline"
-            disabled={!running || rowBusy || !onAction}
+            title={canManage ? undefined : NEEDS_ADMIN}
+            disabled={!running || rowBusy || !onAction || !canManage}
             onClick={() => onAction?.(container, 'restart')}
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden />

@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { useContainerCommands } from '@/hooks/useContainerCommands'
 import { useHostInventory } from '@/hooks/useHostInventory'
 import { useHosts } from '@/hooks/useHosts'
+import { useIsAdmin } from '@/stores/auth'
 import { mockHostResources } from '@/lib/mock'
 import { ApiError } from '@/services/api'
 import { useState } from 'react'
@@ -34,6 +35,7 @@ export function DashboardPage() {
   const [inspecting, setInspecting] = useState<ContainerRow | null>(null)
   const [viewingLogs, setViewingLogs] = useState<ContainerRow | null>(null)
   const commands = useContainerCommands(undefined, () => inventory.refetchAll())
+  const isAdmin = useIsAdmin()
 
   const onlineHosts = hosts.filter((host) => host.status === 'ONLINE')
   const totalContainers = inventory.all.length
@@ -181,6 +183,7 @@ export function DashboardPage() {
           <ContainerTable
             containers={inventory.all}
             showHostColumn
+            canManage={isAdmin}
             busyKey={commands.busyKey}
             onAction={commands.run}
             onInspect={setInspecting}
@@ -193,6 +196,7 @@ export function DashboardPage() {
         <ContainerInspectDrawer
           hostId={inspecting.hostId}
           container={inspecting}
+          canManage={isAdmin}
           busyKey={commands.busyKey}
           onAction={commands.run}
           onViewLogs={(container) => {

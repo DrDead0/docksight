@@ -20,8 +20,10 @@ import {
   DropdownSeparator,
 } from '@/components/ui/dropdown'
 import { useHosts } from '@/hooks/useHosts'
-import { MOCK_NOTIFICATIONS, MOCK_USER, MOCK_WORKSPACE } from '@/lib/mock'
+import { MOCK_NOTIFICATIONS, MOCK_WORKSPACE } from '@/lib/mock'
+import { initialsFor } from '@/lib/format'
 import { statusTone } from '@/lib/status'
+import { useAuthStore } from '@/stores/auth'
 import { cn } from '@/lib/utils'
 
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
@@ -263,6 +265,8 @@ function NotificationsMenu() {
 
 function UserMenu() {
   const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
+  const signOut = useAuthStore((state) => state.signOut)
 
   return (
     <Dropdown
@@ -278,7 +282,7 @@ function UserMenu() {
           )}
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
-            {MOCK_USER.initials}
+            {initialsFor(user?.email)}
           </span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
         </button>
@@ -287,12 +291,12 @@ function UserMenu() {
       {({ close }) => (
         <>
           <div className="px-2.5 py-2">
-            <p className="text-sm font-medium">{MOCK_USER.name}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {MOCK_USER.email}
-            </p>
-            <Badge tone="primary" className="mt-1.5">
-              {MOCK_USER.role}
+            <p className="truncate text-sm font-medium">{user?.email}</p>
+            <Badge
+              tone={user?.role === 'ADMIN' ? 'primary' : 'neutral'}
+              className="mt-1.5"
+            >
+              {user?.role ?? 'UNKNOWN'}
             </Badge>
           </div>
           <DropdownSeparator />
@@ -309,15 +313,17 @@ function UserMenu() {
             Settings
           </DropdownItem>
           <DropdownSeparator />
-          <DropdownItem icon={<LogOut className="h-4 w-4" />} destructive disabled>
+          <DropdownItem
+            icon={<LogOut className="h-4 w-4" />}
+            destructive
+            onSelect={() => {
+              close()
+              signOut()
+              navigate('/login', { replace: true })
+            }}
+          >
             Sign out
           </DropdownItem>
-          <div className="px-2.5 py-1.5">
-            <MockBadge
-              label="Mock account"
-              title="Auth endpoints exist on the server but are not wired into the web app yet"
-            />
-          </div>
         </>
       )}
     </Dropdown>

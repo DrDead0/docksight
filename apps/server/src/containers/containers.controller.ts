@@ -14,15 +14,19 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiBody,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
   ApiProperty,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 import { Observable, finalize } from 'rxjs';
 import type { LogsChunkPayload } from '@docksight/protocol';
+import { Roles } from '../auth/roles.decorator';
 import { ContainersService } from './containers.service';
 
 class ContainerActionBodyDto {
@@ -67,9 +71,13 @@ export class ContainersController {
   }
 
   @Post(':id/start')
+  @Roles('ADMIN')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Start a container on a host' })
   @ApiBody({ type: ContainerActionBodyDto })
   @ApiOkResponse({ description: 'Lifecycle command result' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid token' })
+  @ApiForbiddenResponse({ description: 'Requires the ADMIN role' })
   start(
     @Param('id') containerId: string,
     @Body() body: ContainerActionBodyDto,
@@ -78,20 +86,25 @@ export class ContainersController {
   }
 
   @Post(':id/stop')
+  @Roles('ADMIN')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Stop a container on a host' })
   @ApiBody({ type: ContainerActionBodyDto })
   @ApiOkResponse({ description: 'Lifecycle command result' })
-  stop(
-    @Param('id') containerId: string,
-    @Body() body: ContainerActionBodyDto,
-  ) {
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid token' })
+  @ApiForbiddenResponse({ description: 'Requires the ADMIN role' })
+  stop(@Param('id') containerId: string, @Body() body: ContainerActionBodyDto) {
     return this.runAction(containerId, body.hostId, 'stop');
   }
 
   @Post(':id/restart')
+  @Roles('ADMIN')
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Restart a container on a host' })
   @ApiBody({ type: ContainerActionBodyDto })
   @ApiOkResponse({ description: 'Lifecycle command result' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid token' })
+  @ApiForbiddenResponse({ description: 'Requires the ADMIN role' })
   restart(
     @Param('id') containerId: string,
     @Body() body: ContainerActionBodyDto,
@@ -129,7 +142,7 @@ export class ContainersController {
         subscriber.next({
           type: 'logs.chunk',
           data: payload,
-        } as MessageEvent);
+        });
       };
 
       void this.containersService
@@ -145,11 +158,13 @@ export class ContainersController {
           subscriber.next({
             type: 'logs.subscribed',
             data: { requestId: id, containerId },
-          } as MessageEvent);
+          });
         })
         .catch((error: unknown) => {
           const message =
-            error instanceof Error ? error.message : 'Failed to start log stream';
+            error instanceof Error
+              ? error.message
+              : 'Failed to start log stream';
           subscriber.error(this.mapStreamError(message));
         });
 

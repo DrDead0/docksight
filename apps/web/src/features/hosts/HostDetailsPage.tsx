@@ -46,6 +46,7 @@ import {
 import { useContainerCommands } from '@/hooks/useContainerCommands'
 import { useContainers } from '@/hooks/useContainers'
 import { useHosts } from '@/hooks/useHosts'
+import { useIsAdmin } from '@/stores/auth'
 import {
   formatBytes,
   formatDateTime,
@@ -88,6 +89,7 @@ export function HostDetailsPage() {
   const commands = useContainerCommands(hostId, () => {
     void containersQuery.refetch()
   })
+  const isAdmin = useIsAdmin()
 
   const tabParam = searchParams.get('tab') as TabKey | null
   const tab: TabKey = tabParam && TAB_KEYS.includes(tabParam) ? tabParam : 'overview'
@@ -244,6 +246,7 @@ export function HostDetailsPage() {
         ) : (
           <ContainerTable
             containers={containers}
+            canManage={isAdmin}
             busyKey={commands.busyKey}
             onAction={commands.run}
             onInspect={setInspecting}
@@ -269,6 +272,7 @@ export function HostDetailsPage() {
         <ContainerInspectDrawer
           hostId={host.id}
           container={inspecting}
+          canManage={isAdmin}
           busyKey={commands.busyKey}
           onAction={commands.run}
           onViewLogs={(container) => {

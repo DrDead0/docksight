@@ -108,3 +108,15 @@ export async function copyToClipboard(value: string): Promise<boolean> {
     return false
   }
 }
+
+/** Two-letter monogram from an email local part, e.g. "sam.r@x.io" -> "SA". */
+export function initialsFor(email: string | undefined): string {
+  const local = (email ?? '').split('@')[0]
+  if (!local) {
+    return '??'
+  }
+  const parts = local.split(/[._-]/).filter(Boolean)
+  const letters =
+    parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}` : local.slice(0, 2)
+  return letters.toUpperCase()
+}

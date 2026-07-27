@@ -14,7 +14,9 @@ import {
 } from 'lucide-react'
 import { Badge, MockBadge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { APP_VERSION, MOCK_USER } from '@/lib/mock'
+import { initialsFor } from '@/lib/format'
+import { APP_VERSION } from '@/lib/mock'
+import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { cn } from '@/lib/utils'
 
@@ -126,20 +128,22 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
 function SidebarFooter() {
   const theme = useThemeStore((state) => state.theme)
   const toggleTheme = useThemeStore((state) => state.toggleTheme)
+  const user = useAuthStore((state) => state.user)
 
   return (
     <div className="border-t border-border p-3">
       <div className="flex items-center gap-3 rounded-md px-2 py-2">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-          {MOCK_USER.initials}
+          {initialsFor(user?.email)}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{MOCK_USER.name}</p>
+          <p className="truncate text-sm font-medium">
+            {user?.email ?? 'Signed out'}
+          </p>
           <p className="truncate text-xs text-muted-foreground">
-            {MOCK_USER.role}
+            {user?.role === 'ADMIN' ? 'Administrator' : 'Viewer'}
           </p>
         </div>
-        <MockBadge title="Auth is not wired into the web app yet" />
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">

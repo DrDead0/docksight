@@ -1,10 +1,12 @@
-import { Moon, Sun } from 'lucide-react'
+import { LogOut, Moon, Sun } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { PageContainer, PageHeader } from '@/components/layout/AppShell'
-import { MockBadge } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataList } from '@/components/ui/data-list'
-import { APP_VERSION, MOCK_USER } from '@/lib/mock'
+import { APP_VERSION } from '@/lib/mock'
+import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { cn } from '@/lib/utils'
 
@@ -14,8 +16,11 @@ function apiBaseUrl(): string {
 }
 
 export function SettingsPage() {
+  const navigate = useNavigate()
   const theme = useThemeStore((state) => state.theme)
   const setTheme = useThemeStore((state) => state.setTheme)
+  const user = useAuthStore((state) => state.user)
+  const signOut = useAuthStore((state) => state.signOut)
 
   return (
     <PageContainer className="max-w-4xl">
@@ -113,24 +118,39 @@ export function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle action={<MockBadge label="Mock account" />}>
-              Account
-            </CardTitle>
+            <CardTitle>Account</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <DataList
               items={[
-                { label: 'Name', value: MOCK_USER.name },
-                { label: 'Email', value: MOCK_USER.email },
-                { label: 'Role', value: MOCK_USER.role },
+                { label: 'Email', value: user?.email ?? '—' },
+                {
+                  label: 'Role',
+                  value: (
+                    <Badge tone={user?.role === 'ADMIN' ? 'primary' : 'neutral'}>
+                      {user?.role ?? 'UNKNOWN'}
+                    </Badge>
+                  ),
+                },
+                { label: 'User ID', value: user?.id ?? '—', mono: true },
               ]}
             />
             <p className="text-xs text-muted-foreground">
-              The server exposes auth modules, but the web console does not sign
-              in yet — this block is a placeholder.
+              {user?.role === 'ADMIN'
+                ? 'Administrators can start, stop and restart containers.'
+                : 'Viewers have read-only access; container actions require the ADMIN role.'}
             </p>
-            <Button type="button" variant="outline" size="sm" disabled>
-              Manage account
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                signOut()
+                navigate('/login', { replace: true })
+              }}
+            >
+              <LogOut className="h-3.5 w-3.5" aria-hidden />
+              Sign out
             </Button>
           </CardContent>
         </Card>
