@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { Container } from 'lucide-react'
-import { APP_VERSION } from '@/lib/mock'
 
 /**
  * Centered shell for the two pre-session screens (login, first-run setup).
@@ -11,12 +10,10 @@ export function AuthLayout({
   title,
   description,
   children,
-  footer,
 }: {
   title: string
   description: ReactNode
   children: ReactNode
-  footer?: ReactNode
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -39,12 +36,8 @@ export function AuthLayout({
           <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
             {children}
           </div>
-
-          
         </div>
       </div>
-
-    
     </div>
   )
 }

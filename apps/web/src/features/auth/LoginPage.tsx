@@ -52,7 +52,6 @@ export function LoginPage() {
     <AuthLayout
       title="Sign in to DockSight"
       description="Manage your Docker hosts and containers."
-      footer="Sessions last 12 hours by default."
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <FormError message={error} />

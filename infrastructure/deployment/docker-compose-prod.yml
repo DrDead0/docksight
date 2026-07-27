@@ -51,23 +51,48 @@ services:
       start_period: 5s
 
   server:
-    image: gchr.io/docksight/server:latest
+    image: ghcr.io/docksight/server:latest
     container_name: docksight-server
     labels:
       com.docksight.internal: "true"
+    restart: unless-stopped
+    # Build locally with `docker compose -f docker-compose-prod.yml build`;
+    # the context is the repository root because this is a workspaces monorepo.
+    build:
+      context: ../..
+      dockerfile: apps/server/Dockerfile
     environment:
-      DATABASE_URL: postgres://docksight:docksight-password@postgres:5432/docksight
+      # Must match the postgres service credentials above.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-docksight}:${POSTGRES_PASSWORD:-docksight-password}@postgres:5432/${POSTGRES_DB:-docksight}?schema=public
       REDIS_HOST: redis
       PORT: 8080
+      # Required — the server refuses to start without it. Generate with:
+      #   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+    networks:
+      - docksight-network
+    # Wait for a healthy database: the entrypoint runs `prisma migrate deploy`
+    # before booting and will exit if Postgres is not accepting connections.
     depends_on:
-      - postgres
-      - redis
-  
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   web:
-    image: gchr.io/docksight/web:latest
+    image: ghcr.io/docksight/web:latest
     container_name: docksight-web
     labels:
       com.docksight.internal: "true"
+    restart: unless-stopped
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Relative on purpose: the browser reaches the API through the nginx
+        # service below, on the same origin.
+        VITE_API_URL: /api
     networks:
       - docksight-network
 
@@ -76,10 +101,14 @@ services:
     container_name: docksight-nginx
     labels:
       com.docksight.internal: "true"
+    restart: unless-stopped
     ports:
       - "${DOCKSIGHT_PORT:-2002}:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # The config lives next to this file, not in a nginx/ subdirectory.
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - docksight-network
     depends_on:
       - web
       - server

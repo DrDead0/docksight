@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { LoaderCircle, ShieldCheck } from 'lucide-react'
 import { AuthLayout, FormError, FormField } from '@/features/auth/AuthLayout'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/services/api'
@@ -66,7 +65,6 @@ export function SetupPage() {
     <AuthLayout
       title="Welcome to DockSight"
       description="Create the administrator account for this instance. This screen appears only once."
-      footer="This account can manage hosts, containers and future users."
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <FormError message={error} />
