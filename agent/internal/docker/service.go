@@ -204,7 +204,6 @@ func mapContainerMounts(mounts []types.MountPoint) []Mount {
 	for _, mount := range mounts {
 		result = append(result, Mount{
 
-
 			Source: mount.Source,
 			Target: mount.Destination,
 			Mode:   mount.Mode,
@@ -217,44 +216,41 @@ func mapContainerNetworks(networks map[string]*network.EndpointSettings) []Netwo
 	for name, settings := range networks {
 		result = append(result, Network{
 			Name: name,
-			IP: settings.IPAddress,
+			IP:   settings.IPAddress,
 		})
 	}
 	return result
-}	
-
+}
 
 func mapContainerInspect(container types.ContainerJSON) *ContainerInspect {
 	return &ContainerInspect{
-		ID: container.ID,
+		ID:      container.ID,
 		ShortID: shortID(container.ID),
-		Name: container.Name,
-		Image: container.Config.Image,
+		Name:    container.Name,
+		Image:   container.Config.Image,
 		State: State{
-			Status: container.State.Status,
-			Running: container.State.Running,
-			Paused: container.State.Paused,
+			Status:     container.State.Status,
+			Running:    container.State.Running,
+			Paused:     container.State.Paused,
 			Restarting: container.State.Restarting,
 		},
-		Created: parseDockerTime(container.Created),
-		StartedAt: parseDockerTime(container.State.StartedAt),
-		Ports: mapContainerPorts(container.NetworkSettings.Ports),
-		Mounts: mapContainerMounts(container.Mounts),
-		Networks: mapContainerNetworks(container.NetworkSettings.Networks),
-		WorkingDir: container.Config.WorkingDir,
-		Cmd: container.Config.Cmd,
+		Created:       parseDockerTime(container.Created),
+		StartedAt:     parseDockerTime(container.State.StartedAt),
+		Ports:         mapContainerPorts(container.NetworkSettings.Ports),
+		Mounts:        mapContainerMounts(container.Mounts),
+		Networks:      mapContainerNetworks(container.NetworkSettings.Networks),
+		WorkingDir:    container.Config.WorkingDir,
+		Cmd:           container.Config.Cmd,
 		RestartPolicy: string(container.HostConfig.RestartPolicy.Name),
-		
 	}
 }
-
 
 func (s *Service) InspectContainer(ctx context.Context, containerID string) (*ContainerInspect, error) {
 
 	if err := s.validate(); err != nil {
 		return nil, err
 	}
-	
+
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 

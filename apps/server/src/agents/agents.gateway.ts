@@ -12,9 +12,10 @@ import {
   AGENT_HEARTBEAT,
   AGENT_REGISTER,
   AGENT_REGISTERED,
+  CONTAINER_INSPECT,
+  CONTAINER_INSPECTED,
   CONTAINER_LIST,
   CONTAINER_LISTED,
-  CONTA
   CONTAINER_RESTART,
   CONTAINER_RESULT,
   CONTAINER_START,
@@ -27,6 +28,7 @@ import {
   type AgentHeartbeatPayload,
   type AgentRegisterPayload,
   type ContainerAction,
+  type ContainerInspectedPayload,
   type ContainerListedPayload,
   type ContainerResultPayload,
   type ContainerSummary,
@@ -53,6 +55,13 @@ type PendingCommand = {
   timer: ReturnType<typeof setTimeout>;
 };
 
+type PendingInspect = {
+  agentUuid: string;
+  resolve: (result: ContainerInspectedPayload) => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+};
+
 type LogSubscriber = {
   agentUuid: string;
   containerId: string;
@@ -73,6 +82,7 @@ export class AgentsGateway
   private readonly socketsByUuid = new Map<string, AgentSocket>();
   private readonly pendingLists = new Map<string, PendingList>();
   private readonly pendingCommands = new Map<string, PendingCommand>();
+  private readonly pendingInspects = new Map<string, PendingInspect>();
   private readonly logSubscribers = new Map<string, LogSubscriber>();
 
   constructor(
@@ -109,6 +119,10 @@ export class AgentsGateway
       this.rejectPendingCommandsForAgent(
         uuid,
         new Error('Agent disconnected before command completed'),
+      );
+      this.rejectPendingInspectsForAgent(
+        uuid,
+        new Error('Agent disconnected before inspect completed'),
       );
       this.unsubscribeLogsForAgent(uuid);
       await this.agentsService.markOffline(uuid);
@@ -198,6 +212,48 @@ export class AgentsGateway
 
       this.logger.log(
         `Sent ${type} requestId=${requestId} containerId=${containerId.slice(0, 12)} uuid=${agentUuid}`,
+      );
+    });
+  }
+
+  async inspectContainer(
+    agentUuid: string,
+    hostId: string,
+    containerId: string,
+    timeoutMs = 15_000,
+  ): Promise<ContainerInspectedPayload> {
+    this.inventory.rememberHost(hostId, agentUuid);
+
+    const client = this.socketsByUuid.get(agentUuid);
+    if (!client || client.readyState !== WebSocket.OPEN) {
+      throw new Error('Agent is not connected');
+    }
+
+    const requestId = randomUUID();
+
+    return new Promise<ContainerInspectedPayload>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pendingInspects.delete(requestId);
+        reject(new Error('Agent timed out waiting for container.inspected'));
+      }, timeoutMs);
+
+      this.pendingInspects.set(requestId, {
+        agentUuid,
+        resolve,
+        reject,
+        timer,
+      });
+
+      this.send(
+        client,
+        createEnvelope(CONTAINER_INSPECT, {
+          requestId,
+          containerId,
+        }),
+      );
+
+      this.logger.log(
+        `Sent container.inspect requestId=${requestId} containerId=${containerId.slice(0, 12)} uuid=${agentUuid}`,
       );
     });
   }
@@ -292,6 +348,17 @@ export class AgentsGateway
     }
   }
 
+  private rejectPendingInspectsForAgent(agentUuid: string, error: Error) {
+    for (const [requestId, pending] of this.pendingInspects.entries()) {
+      if (pending.agentUuid !== agentUuid) {
+        continue;
+      }
+      clearTimeout(pending.timer);
+      this.pendingInspects.delete(requestId);
+      pending.reject(error);
+    }
+  }
+
   private async handleMessage(client: AgentSocket, data: RawData) {
     let parsed: unknown;
     try {
@@ -338,6 +405,11 @@ export class AgentsGateway
       case CONTAINER_RESULT:
         this.handleContainerResult(
           envelope.payload as ContainerResultPayload,
+        );
+        break;
+      case CONTAINER_INSPECTED:
+        this.handleContainerInspected(
+          envelope.payload as ContainerInspectedPayload,
         );
         break;
       case LOGS_CHUNK:
@@ -452,6 +524,35 @@ export class AgentsGateway
       containerId: payload.containerId,
       ok: Boolean(payload.ok),
       message: payload.message ?? '',
+      error: payload.error ?? null,
+    });
+  }
+
+  private handleContainerInspected(payload: ContainerInspectedPayload) {
+    if (!payload?.requestId) {
+      this.logger.warn('Ignored container.inspected without requestId');
+      return;
+    }
+
+    const pending = this.pendingInspects.get(payload.requestId);
+    if (!pending) {
+      this.logger.warn(
+        `No pending inspect for container.inspected requestId=${payload.requestId}`,
+      );
+      return;
+    }
+
+    clearTimeout(pending.timer);
+    this.pendingInspects.delete(payload.requestId);
+
+    this.logger.log(
+      `Received container.inspected requestId=${payload.requestId} ok=${payload.ok}`,
+    );
+
+    pending.resolve({
+      requestId: payload.requestId,
+      container: payload.container ?? null,
+      ok: Boolean(payload.ok),
       error: payload.error ?? null,
     });
   }

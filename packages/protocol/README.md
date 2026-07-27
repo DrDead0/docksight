@@ -25,6 +25,8 @@ Used by:
 | `AGENT_HEARTBEAT` | `agent.heartbeat` |
 | `CONTAINER_LIST` | `container.list` |
 | `CONTAINER_LISTED` | `container.listed` |
+| `CONTAINER_INSPECT` | `container.inspect` |
+| `CONTAINER_INSPECTED` | `container.inspected` |
 | `CONTAINER_START` | `container.start` |
 | `CONTAINER_STOP` | `container.stop` |
 | `CONTAINER_RESTART` | `container.restart` |

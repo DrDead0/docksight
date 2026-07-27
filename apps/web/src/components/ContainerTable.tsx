@@ -1,13 +1,24 @@
-import type { ReactNode } from 'react'
-import { LoaderCircle, Play, RotateCcw, ScrollText, Square } from 'lucide-react'
+import type { MouseEvent, ReactNode } from 'react'
+import {
+  Info,
+  LoaderCircle,
+  Play,
+  RotateCcw,
+  ScrollText,
+  Square,
+} from 'lucide-react'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { Container, ContainerAction } from '@/types/api'
 
 type ContainerTableProps = {
   containers: Container[]
   busyKey?: string | null
+  selectedContainerId?: string | null
   onAction?: (container: Container, action: ContainerAction) => void
+  onSelect?: (container: Container) => void
+  onInspect?: (container: Container) => void
   onViewLogs?: (container: Container) => void
 }
 
@@ -19,7 +30,10 @@ function isRunning(container: Container): boolean {
 export function ContainerTable({
   containers,
   busyKey = null,
+  selectedContainerId = null,
   onAction,
+  onSelect,
+  onInspect,
   onViewLogs,
 }: ContainerTableProps) {
   if (containers.length === 0) {
@@ -53,7 +67,11 @@ export function ContainerTable({
             return (
               <tr
                 key={container.id}
-                className="border-t border-border/80 hover:bg-accent/30"
+                className={cn(
+                  'cursor-pointer border-t border-border/80 hover:bg-accent/30',
+                  selectedContainerId === container.id ? 'bg-accent/40' : null,
+                )}
+                onClick={() => onSelect?.(container)}
               >
                 <td className="px-4 py-3 font-medium">{container.name}</td>
                 <td className="px-4 py-3 text-muted-foreground">
@@ -69,27 +87,48 @@ export function ContainerTable({
                       icon={<Play className="h-3.5 w-3.5" aria-hidden />}
                       disabled={running || rowBusy || !onAction}
                       loading={rowBusy && busyAction === 'start'}
-                      onClick={() => onAction?.(container, 'start')}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onAction?.(container, 'start')
+                      }}
                     />
                     <ActionButton
                       label="Stop"
                       icon={<Square className="h-3.5 w-3.5" aria-hidden />}
                       disabled={!running || rowBusy || !onAction}
                       loading={rowBusy && busyAction === 'stop'}
-                      onClick={() => onAction?.(container, 'stop')}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onAction?.(container, 'stop')
+                      }}
                     />
                     <ActionButton
                       label="Restart"
                       icon={<RotateCcw className="h-3.5 w-3.5" aria-hidden />}
                       disabled={!running || rowBusy || !onAction}
                       loading={rowBusy && busyAction === 'restart'}
-                      onClick={() => onAction?.(container, 'restart')}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onAction?.(container, 'restart')
+                      }}
+                    />
+                    <ActionButton
+                      label="Inspect"
+                      icon={<Info className="h-3.5 w-3.5" aria-hidden />}
+                      disabled={!onInspect}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onInspect?.(container)
+                      }}
                     />
                     <ActionButton
                       label="Logs"
                       icon={<ScrollText className="h-3.5 w-3.5" aria-hidden />}
                       disabled={!onViewLogs}
-                      onClick={() => onViewLogs?.(container)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onViewLogs?.(container)
+                      }}
                     />
                   </div>
                 </td>
@@ -113,7 +152,7 @@ function ActionButton({
   icon: ReactNode
   disabled?: boolean
   loading?: boolean
-  onClick: () => void
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void
 }) {
   return (
     <Button
@@ -123,6 +162,7 @@ function ActionButton({
       disabled={disabled}
       onClick={onClick}
       aria-label={label}
+      title={label}
     >
       {loading ? (
         <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />

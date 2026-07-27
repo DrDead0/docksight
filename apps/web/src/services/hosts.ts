@@ -2,6 +2,7 @@ import { apiClient } from '@/services/api'
 import type {
   ContainerAction,
   ContainerActionResult,
+  ContainerInspectResult,
   Host,
   HostContainersResponse,
 } from '@/types/api'
@@ -24,5 +25,14 @@ export function runContainerAction(
   return apiClient.post<ContainerActionResult>(
     `/containers/${encodeURIComponent(containerId)}/${action}`,
     { hostId },
+  )
+}
+
+export function inspectContainer(
+  containerId: string,
+  hostId: string,
+): Promise<ContainerInspectResult> {
+  return apiClient.get<ContainerInspectResult>(
+    `/containers/${encodeURIComponent(containerId)}/inspect?hostId=${encodeURIComponent(hostId)}`,
   )
 }

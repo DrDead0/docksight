@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type {
   ContainerAction,
+  ContainerInspectedPayload,
   ContainerResultPayload,
   LogsChunkPayload,
 } from '@docksight/protocol';
@@ -35,6 +36,29 @@ export class ContainersService {
       agent.uuid,
       agent.id,
       action,
+      containerId,
+    );
+  }
+
+  async inspectContainer(
+    hostId: string,
+    containerId: string,
+  ): Promise<ContainerInspectedPayload> {
+    if (!hostId?.trim()) {
+      throw new Error('hostId is required');
+    }
+    if (!containerId?.trim()) {
+      throw new Error('containerId is required');
+    }
+
+    const agent = await this.agentsService.findById(hostId);
+    if (!agent) {
+      throw new Error(`Host not found: ${hostId}`);
+    }
+
+    return this.agentsGateway.inspectContainer(
+      agent.uuid,
+      agent.id,
       containerId,
     );
   }

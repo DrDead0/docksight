@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Container, RefreshCw } from 'lucide-react'
+import { ContainerInspectPanel } from '@/components/ContainerInspectPanel'
 import { ContainerLogsPanel } from '@/components/ContainerLogsPanel'
 import { ContainerTable } from '@/components/ContainerTable'
 import { HostCard } from '@/components/HostCard'
@@ -17,6 +18,9 @@ export function DashboardPage() {
   const hosts = hostsQuery.data ?? []
   const [selectedHostId, setSelectedHostId] = useState<string | undefined>()
   const [busyKey, setBusyKey] = useState<string | null>(null)
+  const [inspectContainer, setInspectContainer] = useState<ContainerRow | null>(
+    null,
+  )
   const [logsContainer, setLogsContainer] = useState<ContainerRow | null>(null)
 
   useEffect(() => {
@@ -26,6 +30,7 @@ export function DashboardPage() {
     }
     if (!selectedHostId || !hosts.some((host) => host.id === selectedHostId)) {
       setSelectedHostId(hosts[0].id)
+      setInspectContainer(null)
       setLogsContainer(null)
     }
   }, [hosts, selectedHostId])
@@ -181,9 +186,18 @@ export function DashboardPage() {
             containers={containersQuery.data?.containers ?? []}
             busyKey={busyKey}
             onAction={handleContainerAction}
+            onInspect={setInspectContainer}
             onViewLogs={setLogsContainer}
           />
         )}
+
+        {selectedHostId && inspectContainer ? (
+          <ContainerInspectPanel
+            hostId={selectedHostId}
+            container={inspectContainer}
+            onClose={() => setInspectContainer(null)}
+          />
+        ) : null}
 
         {selectedHostId && logsContainer ? (
           <ContainerLogsPanel

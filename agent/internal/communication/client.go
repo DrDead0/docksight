@@ -75,11 +75,12 @@ type ContainerListedPayload struct {
 }
 
 type ContainerInspectedPayload struct {
-	RequestID string            `json:"requestId"`
+	RequestID string                   `json:"requestId"`
 	Container *docker.ContainerInspect `json:"container"`
-	Ok bool  `json:"ok"`
-	Error *string `json:"error"`
+	Ok        bool                     `json:"ok"`
+	Error     *string                  `json:"error"`
 }
+
 // ContainerCommandPayload is shared by start/stop/restart.
 type ContainerCommandPayload struct {
 	RequestID   string `json:"requestId"`
@@ -363,7 +364,7 @@ func (c *Client) handleServerMessage(ctx context.Context, conn *websocket.Conn, 
 		return c.handleLogsUnsubscribe(env)
 	case TypeRegistered:
 		return nil
-    case TypeContainerInspect:
+	case TypeContainerInspect:
 		return c.handleContainerInspect(ctx, conn, env)
 	default:
 		logger.Warn("unknown server message type", "type", env.Type)
@@ -612,23 +613,22 @@ func (c *Client) handleContainerInspect(ctx context.Context, conn *websocket.Con
 		return c.writeContainerInspected(conn, ContainerInspectedPayload{
 			RequestID: payload.RequestID,
 			Container: nil,
-			Ok: false,
-			Error: strPtr("requestId and containerId are required"),		
-
+			Ok:        false,
+			Error:     strPtr("requestId and containerId are required"),
 		})
-}
+	}
 
-if c.docker == nil {
-	return c.writeContainerInspected(conn, ContainerInspectedPayload{
-		RequestID: payload.RequestID,
-		Container: nil,
-		Ok: false,
-		Error: strPtr("Docker engine unavailable"),
-	})
+	if c.docker == nil {
+		return c.writeContainerInspected(conn, ContainerInspectedPayload{
+			RequestID: payload.RequestID,
+			Container: nil,
+			Ok:        false,
+			Error:     strPtr("Docker engine unavailable"),
+		})
 
-}
+	}
 
-    container, err := c.docker.InspectContainer(
+	container, err := c.docker.InspectContainer(
 		ctx,
 		payload.ContainerID,
 	)
@@ -639,11 +639,15 @@ if c.docker == nil {
 
 		return c.writeContainerInspected(conn, ContainerInspectedPayload{
 			RequestID: payload.RequestID,
-			Error: &msg,
+			Container: nil,
+			Ok:        false,
+			Error:     &msg,
 		})
 	}
 	return c.writeContainerInspected(conn, ContainerInspectedPayload{
 		RequestID: payload.RequestID,
 		Container: container,
+		Ok:        true,
+		Error:     nil,
 	})
 }

@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   GatewayTimeoutException,
+  Get,
   HttpException,
   MessageEvent,
   NotFoundException,
@@ -35,6 +36,35 @@ class ContainerActionBodyDto {
 @Controller('containers')
 export class ContainersController {
   constructor(private readonly containersService: ContainersService) {}
+
+  @Get(':id/inspect')
+  @ApiOperation({ summary: 'Inspect a container on a host' })
+  @ApiOkResponse({ description: 'Docker inspect data for the container' })
+  async inspect(
+    @Param('id') containerId: string,
+    @Query('hostId') hostId: string,
+  ) {
+    if (!hostId?.trim()) {
+      throw new BadRequestException('hostId query parameter is required');
+    }
+
+    try {
+      const result = await this.containersService.inspectContainer(
+        hostId,
+        containerId,
+      );
+
+      if (!result.ok) {
+        throw new BadRequestException(
+          result.error ?? 'Container inspect failed',
+        );
+      }
+
+      return result;
+    } catch (error) {
+      this.mapAndThrow(error, 'Container inspect failed');
+    }
+  }
 
   @Post(':id/start')
   @ApiOperation({ summary: 'Start a container on a host' })
@@ -158,25 +188,28 @@ export class ContainersController {
         action,
       );
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      const message =
-        error instanceof Error ? error.message : 'Container action failed';
+      this.mapAndThrow(error, 'Container action failed');
+    }
+  }
 
-      if (message.includes('not found')) {
-        throw new NotFoundException(message);
-      }
-      if (message.includes('not connected') || message.includes('offline')) {
-        throw new ServiceUnavailableException(message);
-      }
-      if (message.includes('timed out')) {
-        throw new GatewayTimeoutException(message);
-      }
-      if (message.includes('required')) {
-        throw new BadRequestException(message);
-      }
+  private mapAndThrow(error: unknown, fallback: string): never {
+    if (error instanceof HttpException) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : fallback;
+
+    if (message.includes('not found')) {
+      throw new NotFoundException(message);
+    }
+    if (message.includes('not connected') || message.includes('offline')) {
+      throw new ServiceUnavailableException(message);
+    }
+    if (message.includes('timed out')) {
+      throw new GatewayTimeoutException(message);
+    }
+    if (message.includes('required')) {
       throw new BadRequestException(message);
     }
+    throw new BadRequestException(message);
   }
 }
