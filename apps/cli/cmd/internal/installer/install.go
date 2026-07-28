@@ -1,6 +1,8 @@
 package installer
 
 import (
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/filesystem"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/system"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
 )
@@ -11,26 +13,33 @@ func Install() error {
 
 	ui.Info("Starting DockSight installation")
 
+
+	// 1. Validate system
+
 	if err := system.ValidateSystem(); err != nil {
 		return err
 	}
 
-	ui.Success("System validation completed")
+
+	// 2. Load default configuration
+
+	cfg := config.Default()
+
+	config.Show(cfg)
 
 
-	// Future steps will come here:
+	// 3. Prepare directories
 
-	// Step 2:
-	// config.Load()
+	ui.Step(6, 6, "Preparing installation directories")
 
-	// Step 3:
-	// release.Download()
+	if err := filesystem.CreateDirectories(
+		cfg.InstallationDir,
+		cfg.DataDir,
+	); err != nil {
+		return err
+	}
 
-	// Step 4:
-	// compose.Generate()
-
-	// Step 5:
-	// compose.Up()
+	ui.Success("Directories created")
 
 
 	ui.Success("DockSight installation preparation complete")
