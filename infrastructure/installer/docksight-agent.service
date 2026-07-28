@@ -1,0 +1,23 @@
+[Unit]
+Description=DockSight Agent
+After=network.target
+
+
+[Service]
+
+Type=simple
+
+User=docksight
+Group=docksight
+
+ExecStart=/opt/docksight-agent/docksight-agent \
+--config /etc/docksight/config.yaml
+
+
+Restart=always
+RestartSec=5
+
+
+[Install]
+
+WantedBy=multi-user.target
