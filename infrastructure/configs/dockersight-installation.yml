@@ -1,0 +1,119 @@
+# DockSight local development infrastructure
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — primary relational database for DockSight
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    container_name: docksight-postgres
+    labels:
+      com.docksight.internal: "true"
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-docksight}
+      POSTGRES_USER: ${POSTGRES_USER:-docksight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docksight-password}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - docksight-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-docksight} -d ${POSTGRES_DB:-docksight}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Redis — cache / pub-sub placeholder for realtime features
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: docksight-redis
+    labels:
+      com.docksight.internal: "true"
+    restart: unless-stopped
+   
+    volumes:
+      - redis-data:/data
+    networks:
+      - docksight-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  server:
+    image:  ghcr.io/rodriguecyber/docksight-server:1.0
+    container_name: docksight-server
+    labels:
+      com.docksight.internal: "true"
+    restart: unless-stopped
+    # Build locally with `docker compose -f docker-compose-prod.yml build`;
+    # the context is the repository root because this is a workspaces monorepo.
+    environment:
+      # Must match the postgres service credentials above.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-docksight}:${POSTGRES_PASSWORD:-docksight-password}@postgres:5432/${POSTGRES_DB:-docksight}?schema=public
+      REDIS_HOST: redis
+      PORT: 8080
+      # Required — the server refuses to start without it. Generate with:
+      #   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+      JWT_SECRET: ${JWT_SECRET:-JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+    networks:
+      - docksight-network
+    # Wait for a healthy database: the entrypoint runs `prisma migrate deploy`
+    # before booting and will exit if Postgres is not accepting connections.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    image:  ghcr.io/rodriguecyber/docksight-web:1.0
+    container_name: docksight-web
+    labels:
+      com.docksight.internal: "true"
+    restart: unless-stopped
+    networks:
+      - docksight-network
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: docksight-nginx
+    labels:
+      com.docksight.internal: "true"
+    restart: unless-stopped
+    ports:
+      - "${DOCKSIGHT_PORT:-2002}:80"
+    volumes:
+      # The config lives next to this file, not in a nginx/ subdirectory.
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - docksight-network
+    depends_on:
+      - web
+      - server
+
+# ---------------------------------------------------------------------------
+# Named volumes — persist data across container restarts
+# ---------------------------------------------------------------------------
+volumes:
+  postgres-data:
+  redis-data:
+
+# ---------------------------------------------------------------------------
+# Dedicated network for DockSight development services
+# ---------------------------------------------------------------------------
+networks:
+  docksight-network:
+    name: docksight-network
+    driver: bridge
