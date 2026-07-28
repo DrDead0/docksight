@@ -1,7 +1,9 @@
 package cmd
 
 import (
-	"fmt"
+
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/installer"
 	"github.com/spf13/cobra"
 
 )
@@ -9,11 +11,12 @@ import (
 var installCMD = &cobra.Command{
 	Use: "install",
 	Short: "Install DockSight",
-	Run: func (cmd *cobra.Command, args []string)  {
-		fmt.Println("Installing dockSight")
-		fmt.Println("Checking Docker...")
-		fmt.Println("Creating /opt/docksight...")
-		fmt.Println("Installation preparation complete")
+	RunE: func (cmd *cobra.Command, args []string) error  {
+      if err :=installer.Install(); err!=nil{
+		ui.Error(err.Error())
+		return err
+	}
+	 return nil
 	},
 }
 

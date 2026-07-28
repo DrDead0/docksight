@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"fmt"
 
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +12,7 @@ var versionCMD = &cobra.Command{
 	Use: "version",
 	Short: "Show DockSight version",
 	Run: func(cmd *cobra.Command, args []string){
-		fmt.Println("Docker CLI version:", version)
+		ui.Info("Docker CLI version:" + version)
 	},
 }
 
