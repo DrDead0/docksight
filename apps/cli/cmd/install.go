@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/env"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/filesystem"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/installer"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/release"
@@ -15,8 +16,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// bundleRootDir is the top-level directory inside the installer archive.
-const bundleRootDir = "bundle"
+const (
+	// bundleRootDir is the top-level directory inside the installer archive.
+	bundleRootDir = "bundle"
+
+	envExampleFile = ".env.example"
+	envFile        = ".env"
+)
 
 var installCMD = &cobra.Command{
 	Use:   "install",
@@ -112,6 +118,24 @@ var installCMD = &cobra.Command{
 			cfg.InstallationDir,
 		); err != nil {
 			return err
+		}
+
+		ui.Success("Bundle installed")
+
+		// 9. Generate the environment file
+		created, err := env.Generate(
+			filepath.Join(cfg.InstallationDir, envExampleFile),
+			filepath.Join(cfg.InstallationDir, envFile),
+		)
+
+		if err != nil {
+			return err
+		}
+
+		if created {
+			ui.Success("Generated " + filepath.Join(cfg.InstallationDir, envFile))
+		} else {
+			ui.Warning("Existing " + envFile + " kept — delete it to regenerate credentials")
 		}
 
 		ui.Success(

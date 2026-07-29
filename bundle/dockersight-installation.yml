@@ -60,7 +60,7 @@ services:
     # the context is the repository root because this is a workspaces monorepo.
     environment:
       # Must match the postgres service credentials above.
-      DATABASE_URL: postgresql://${POSTGRES_USER:-docksight}:${POSTGRES_PASSWORD:-docksight-password}@postgres:5432/${POSTGRES_DB:-docksight}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_HOST: redis
       PORT: 8080
       # Required — the server refuses to start without it. Generate with:
