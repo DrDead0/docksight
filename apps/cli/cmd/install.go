@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/compose"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/env"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/filesystem"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/installer"
@@ -22,6 +25,18 @@ const (
 
 	envExampleFile = ".env.example"
 	envFile        = ".env"
+
+	// composeFile is the stack definition shipped inside the bundle.
+	composeFile = "dockersight-installation.yml"
+
+	// startTimeout covers image pulls, which dominate a first install.
+	startTimeout = 15 * time.Minute
+
+	// readyTimeout covers container startup and healthchecks once the images
+	// are local.
+	readyTimeout = 5 * time.Minute
+
+	pollInterval = 2 * time.Second
 )
 
 var installCMD = &cobra.Command{
@@ -140,6 +155,51 @@ var installCMD = &cobra.Command{
 
 		ui.Success(
 			fmt.Sprintf("DockSight %s installed in %s", githubRelease.TagName, cfg.InstallationDir),
+		)
+
+		// 10. Start the stack
+		ui.Info("Starting DockSight services")
+
+		startCtx, cancelStart := context.WithTimeout(cmd.Context(), startTimeout)
+		defer cancelStart()
+
+		if err := compose.Up(
+			startCtx,
+			cfg.InstallationDir,
+			composeFile,
+			os.Stderr,
+		); err != nil {
+			return err
+		}
+
+		// 11. Verify every service came up
+		ui.Info("Waiting for services to become ready")
+
+		readyCtx, cancelReady := context.WithTimeout(cmd.Context(), readyTimeout)
+		defer cancelReady()
+
+		services, err := compose.WaitReady(
+			readyCtx,
+			cfg.InstallationDir,
+			composeFile,
+			pollInterval,
+		)
+
+		for _, service := range services {
+
+			if service.Ready() {
+				ui.Success(service.Describe())
+			} else {
+				ui.Error(service.Describe())
+			}
+		}
+
+		if err != nil {
+			return err
+		}
+
+		ui.Success(
+			fmt.Sprintf("DockSight is running on http://localhost:%d", cfg.Port),
 		)
 
 		return nil
