@@ -9,7 +9,7 @@ import (
 func TestDownload(t *testing.T){
 
 	err := Download(
-		"https://github.com/rodriguecyber/docksight/releases/download/v0.0.1/docksight-install-v0.0.1.tar.gz",
+		"https://github.com/rodriguecyber/docksight/releases/download/v0.0.3/docksight-install-v0.0.3.tar.gz",
 		"/tmp/test-download/test",
 	)
 

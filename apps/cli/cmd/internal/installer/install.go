@@ -48,7 +48,7 @@ func Install() error {
 	}
 
 	ui.Info(
-		"Downloading version " + rel.Version,
+		"Downloading version " + rel.TagName,
 	)
 
 	ui.Success("DockSight installation preparation complete")

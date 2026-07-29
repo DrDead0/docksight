@@ -2,15 +2,11 @@ package release
 
 import (
 	"encoding/json"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
+	"errors"
 	"net/http"
 )
 
-type githubRelease struct {
-	TagName string `json:"tag_name"`
-}
-
-func Latest() (*Release, error) {
+func Latest() (*GithubRelease, error) {
 
 	resp, err := http.Get(
 		"https://api.github.com/repos/rodriguecyber/docksight/releases/latest",
@@ -23,11 +19,10 @@ func Latest() (*Release, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		ui.Error("failed to get latest release")
-		// return nil
+		return nil, errors.New("failed to get latest release: " + resp.Status)
 	}
 
-	var data githubRelease
+	var data GithubRelease
 
 	err = json.NewDecoder(resp.Body).Decode(&data)
 
@@ -35,7 +30,5 @@ func Latest() (*Release, error) {
 		return nil, err
 	}
 
-	return &Release{
-		Version: data.TagName,
-	}, nil
+	return &data, nil
 }

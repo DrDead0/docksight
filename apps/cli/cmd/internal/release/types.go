@@ -1,8 +1,8 @@
 package release
 
-type Asset struct{
+type Asset struct {
 	Name string `json:"name"`
-	URL string `json: "browser_download_url"`
+	URL  string `json:"browser_download_url"`
 }
 
 type GithubRelease struct {
