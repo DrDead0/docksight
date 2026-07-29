@@ -4,16 +4,13 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/filesystem"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/installer"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/release"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
 
 	"github.com/spf13/cobra"
 )
-
-// downloadDir is where the installer bundle is staged before extraction.
-const downloadDir = "/tmp"
-
 
 var installCMD = &cobra.Command{
 	Use:   "install",
@@ -52,8 +49,14 @@ var installCMD = &cobra.Command{
 			fmt.Sprintf("Installer package %s found", asset.Name),
 		)
 
-		// 4. Download installer package
-		destination := filepath.Join(downloadDir, asset.Name)
+		// 4. Download installer package into a private staging directory
+		workspace, err := filesystem.TempWorkspace()
+
+		if err != nil {
+			return err
+		}
+
+		destination := filepath.Join(workspace, asset.Name)
 
 		ui.Info("Downloading installer package")
 
@@ -65,27 +68,19 @@ var installCMD = &cobra.Command{
 			fmt.Sprintf("Download completed: %s", destination),
 		)
 
-    ui.Info(
-	"Extracting installer package",
-)
-extractPath := "/tmp/docksight"
+		// 5. Extract installer package
+		ui.Info("Extracting installer package")
 
+		extractPath := filepath.Join(workspace, "extracted")
 
-err = release.ExtractTarGz(
-	destination,
-	extractPath,
-)
+		if err := release.ExtractTarGz(destination, extractPath); err != nil {
+			return err
+		}
 
-
-if err != nil {
-	return err
-}
-
-
-ui.Success(
-	"Installer extracted",
-)
-
+		ui.Success(
+			fmt.Sprintf("Installer extracted to %s", extractPath),
+		)
+    ui.Info("Copy exrtacted ")
 		return nil
 	},
 }

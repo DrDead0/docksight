@@ -8,7 +8,7 @@ import (
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
 )
 
-func CopyDir( ) error {
+func CopyDir() error {
 
 	cfg := config.Default()
 

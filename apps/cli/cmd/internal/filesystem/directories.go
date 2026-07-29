@@ -4,6 +4,14 @@ import (
 	"os"
 )
 
+// TempWorkspace creates a private staging directory for release artifacts,
+// unique to this run and readable only by the current user. Unlike a fixed
+// path under /tmp it cannot collide with files left by another user.
+func TempWorkspace() (string, error) {
+	return os.MkdirTemp("", "docksight-")
+}
+
+
 func CreateDirectories(
 	installationDir string,
 	dataDir string,
