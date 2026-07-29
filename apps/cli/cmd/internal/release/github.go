@@ -2,15 +2,31 @@ package release
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
+	"time"
 )
 
-func Latest() (*GithubRelease, error) {
+// githubLatestReleaseURL is the GitHub API endpoint for the latest published
+// release. It is a variable so tests can point it at a local server.
+var githubLatestReleaseURL = "https://api.github.com/repos/rodriguecyber/docksight/releases/latest"
 
-	resp, err := http.Get(
-		"https://api.github.com/repos/rodriguecyber/docksight/releases/latest",
-	)
+var httpClient = &http.Client{
+	Timeout: 30 * time.Second,
+}
+
+// LatestGithubRelease fetches the latest published release from the GitHub API.
+func LatestGithubRelease() (*GithubRelease, error) {
+
+	req, err := http.NewRequest(http.MethodGet, githubLatestReleaseURL, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := httpClient.Do(req)
 
 	if err != nil {
 		return nil, err
@@ -19,16 +35,17 @@ func Latest() (*GithubRelease, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to get latest release: " + resp.Status)
+		return nil, fmt.Errorf(
+			"failed to fetch latest release: github returned %s",
+			resp.Status,
+		)
 	}
 
-	var data GithubRelease
+	var githubRelease GithubRelease
 
-	err = json.NewDecoder(resp.Body).Decode(&data)
-
-	if err != nil {
-		return nil, err
+	if err := json.NewDecoder(resp.Body).Decode(&githubRelease); err != nil {
+		return nil, fmt.Errorf("failed to decode github release response: %w", err)
 	}
 
-	return &data, nil
+	return &githubRelease, nil
 }

@@ -41,7 +41,7 @@ func Install() error {
 
 	ui.Step(4, 6, "Downloading DockSight release")
 
-	rel, err := release.Latest()
+	rel, err := release.LatestGithubRelease()
 
 	if err != nil {
 		return err

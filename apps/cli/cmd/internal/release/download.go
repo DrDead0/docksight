@@ -1,16 +1,18 @@
 package release
 
 import (
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 )
 
-
+// Download fetches url and writes the response body to destination,
+// creating the parent directory if needed.
 func Download(url string, destination string) error {
 
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 
 	if err != nil {
 		return err
@@ -18,15 +20,13 @@ func Download(url string, destination string) error {
 
 	defer resp.Body.Close()
 
-
 	if resp.StatusCode != http.StatusOK {
-		ui.Error(
-			"download failed with status: %s"+
-			resp.Status,
-		)
-		return nil
+		return fmt.Errorf("download failed with status: %s", resp.Status)
 	}
 
+	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+		return err
+	}
 
 	file, err := os.Create(destination)
 
@@ -34,15 +34,12 @@ func Download(url string, destination string) error {
 		return err
 	}
 
-	defer file.Close()
-
-
-	_, err = io.Copy(file, resp.Body)
-
-	if err != nil {
+	if _, err := io.Copy(file, resp.Body); err != nil {
+		// Do not leave a truncated bundle behind for the extractor to find.
+		file.Close()
+		os.Remove(destination)
 		return err
 	}
 
-
-	return nil
+	return file.Close()
 }
