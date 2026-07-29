@@ -8,7 +8,7 @@ import (
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/system"
 )
 
-func Install() error {
+func Install( ) error {
 
 	ui.Banner()
 
@@ -28,7 +28,7 @@ func Install() error {
 
 	// 3. Prepare directories
 
-	ui.Step(6, 6, "Preparing installation directories")
+	ui.Step(6, 7, "Preparing installation directories")
 
 	if err := filesystem.CreateDirectories(
 		cfg.InstallationDir,
@@ -39,7 +39,7 @@ func Install() error {
 
 	ui.Success("Directories created")
 
-	ui.Step(4, 6, "Downloading DockSight release")
+	ui.Step(7, 6, "Downloading DockSight release")
 
 	rel, err := release.LatestGithubRelease()
 

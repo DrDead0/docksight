@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/installer"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/release"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/system"
 
 	"github.com/spf13/cobra"
 )
@@ -24,7 +24,7 @@ var installCMD = &cobra.Command{
 		ui.Banner()
 
 		// 1. Validate system
-		if err := system.ValidateSystem(); err != nil {
+		if err := installer.Install(); err != nil {
 			return err
 		}
 
