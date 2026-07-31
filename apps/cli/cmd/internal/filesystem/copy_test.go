@@ -1,4 +1,4 @@
-package installer
+package filesystem
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// bundle builds a directory tree shaped like an extracted installer bundle.
+// bundle builds a directory tree shaped like an extracted platform bundle.
 func bundle(t *testing.T) string {
 	t.Helper()
 
@@ -17,7 +17,7 @@ func bundle(t *testing.T) string {
 	}
 
 	files := map[string]string{
-		"VERSION":               "v0.0.3",
+		"VERSION":               "v0.0.4",
 		".env.example":          "PORT=2002",
 		"compose/docksight.yml": "services: {}",
 	}
@@ -41,7 +41,7 @@ func TestCopyDir(t *testing.T) {
 	}
 
 	for name, want := range map[string]string{
-		"VERSION":               "v0.0.3",
+		"VERSION":               "v0.0.4",
 		".env.example":          "PORT=2002",
 		"compose/docksight.yml": "services: {}",
 	} {
@@ -78,7 +78,7 @@ func TestCopyDirOverwritesExistingInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if string(got) != "v0.0.3" {
+	if string(got) != "v0.0.4" {
 		t.Fatalf("stale file not replaced: %q", string(got))
 	}
 }

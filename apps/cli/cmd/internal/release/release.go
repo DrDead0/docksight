@@ -5,30 +5,60 @@ import (
 	"strings"
 )
 
-// installerAssetPrefix is the filename prefix of the installer bundle
-// published with every release, e.g. docksight-install-v0.0.2.tar.gz
-const installerAssetPrefix = "docksight-install-"
+// Release is a published GitHub release and the assets attached to it.
+type Release struct {
+	TagName string  `json:"tag_name"`
+	Assets  []Asset `json:"assets"`
+}
 
-// FindInstallerAsset returns the installer bundle attached to the given
-// release, or an error if the release does not publish one.
-func FindInstallerAsset(githubRelease *GithubRelease) (*Asset, error) {
+// Version is the release tag, e.g. "v0.0.4".
+func (r *Release) Version() string {
+	return r.TagName
+}
 
-	if githubRelease == nil {
+// Find returns the single asset matching the selector.
+func (r *Release) Find(selector Selector) (*Asset, error) {
+
+	if r == nil {
 		return nil, fmt.Errorf("no release provided")
 	}
 
-	for i := range githubRelease.Assets {
+	for index := range r.Assets {
 
-		asset := &githubRelease.Assets[i]
-
-		if strings.HasPrefix(asset.Name, installerAssetPrefix) {
-			return asset, nil
+		if selector.Matches(r.Assets[index]) {
+			return &r.Assets[index], nil
 		}
 	}
 
 	return nil, fmt.Errorf(
-		"installer asset %s* not found in release %s",
-		installerAssetPrefix,
-		githubRelease.TagName,
+		"release %s publishes no asset matching %s (has: %s)",
+		r.TagName,
+		selector.Describe(),
+		r.assetNames(),
 	)
+}
+
+// PlatformBundle returns the compose application bundle for this release.
+func (r *Release) PlatformBundle() (*Asset, error) {
+	return r.Find(PlatformBundle())
+}
+
+// CLIBinary returns the CLI executable built for the given target.
+func (r *Release) CLIBinary(target Target) (*Asset, error) {
+	return r.Find(CLIBinary(target))
+}
+
+func (r *Release) assetNames() string {
+
+	if len(r.Assets) == 0 {
+		return "no assets"
+	}
+
+	names := make([]string, 0, len(r.Assets))
+
+	for _, asset := range r.Assets {
+		names = append(names, asset.Name)
+	}
+
+	return strings.Join(names, ", ")
 }

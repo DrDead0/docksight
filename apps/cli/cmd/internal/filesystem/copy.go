@@ -1,4 +1,4 @@
-package installer
+package filesystem
 
 import (
 	"io"
@@ -7,8 +7,7 @@ import (
 )
 
 // CopyDir recursively copies the contents of source into destination,
-// preserving file modes. Both paths are supplied by the caller so this stays
-// independent of any particular configuration.
+// preserving file modes.
 func CopyDir(source string, destination string) error {
 
 	info, err := os.Stat(source)
@@ -18,7 +17,7 @@ func CopyDir(source string, destination string) error {
 	}
 
 	if !info.IsDir() {
-		return copyFile(source, destination, info.Mode())
+		return CopyFile(source, destination, info.Mode())
 	}
 
 	return filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
@@ -48,13 +47,14 @@ func CopyDir(source string, destination string) error {
 			return err
 		}
 
-		return copyFile(path, target, info.Mode())
+		return CopyFile(path, target, info.Mode())
 	})
 }
 
-func copyFile(src string, dst string, perm os.FileMode) error {
+// CopyFile copies a single file, replacing destination if it exists.
+func CopyFile(source string, destination string, perm os.FileMode) error {
 
-	in, err := os.Open(src)
+	in, err := os.Open(source)
 
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func copyFile(src string, dst string, perm os.FileMode) error {
 
 	defer in.Close()
 
-	out, err := os.Create(dst)
+	out, err := os.Create(destination)
 
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func copyFile(src string, dst string, perm os.FileMode) error {
 
 	if _, err := io.Copy(out, in); err != nil {
 		out.Close()
-		os.Remove(dst)
+		os.Remove(destination)
 		return err
 	}
 
@@ -78,5 +78,5 @@ func copyFile(src string, dst string, perm os.FileMode) error {
 		return err
 	}
 
-	return os.Chmod(dst, perm)
+	return os.Chmod(destination, perm)
 }

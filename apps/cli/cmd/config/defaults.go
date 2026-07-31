@@ -1,11 +1,12 @@
 package config
 
-func Default () Config{
+// Default returns the standard installation layout.
+func Default() Config {
+
 	return Config{
 		InstallationDir: "/opt/docksight",
-		BundleDir: "/tmp/docksight/bundle",
-		DataDir: "/var/lib/docksight",
-		Port: 2002,
-		Version: "latest",
+		DataDir:         "/var/lib/docksight",
+		BinaryPath:      "/usr/local/bin/docksight",
+		Port:            2002,
 	}
 }

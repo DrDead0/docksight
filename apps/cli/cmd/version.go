@@ -1,21 +1,41 @@
 package cmd
 
 import (
-
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/buildinfo"
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/state"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
+
 	"github.com/spf13/cobra"
 )
 
-const version = "0.1.0"
-
 var versionCMD = &cobra.Command{
-	Use: "version",
+	Use:   "version",
 	Short: "Show DockSight version",
-	Run: func(cmd *cobra.Command, args []string){
-		ui.Info("Docker CLI version:" + version)
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		ui.Info("CLI version: " + buildinfo.Version)
+
+		cfg := config.Default()
+
+		installed, err := state.Load(cfg.StatePath())
+
+		if err != nil {
+			return err
+		}
+
+		if !installed.Installed() {
+			ui.Info("Platform version: not installed")
+			return nil
+		}
+
+		ui.Info("Platform version: " + installed.PlatformVersion)
+
+		return nil
 	},
 }
 
-func init (){
+func init() {
 	rootCmd.AddCommand(versionCMD)
 }
