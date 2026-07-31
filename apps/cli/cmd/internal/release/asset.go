@@ -11,9 +11,11 @@ import (
 //
 //	platform bundle : docksight-platform-v0.0.4.tar.gz
 //	CLI binary      : docksight-cli-v0.0.4-linux-amd64
+//	agent binary    : docksight-agent-v0.0.4-linux-amd64
 const (
 	platformPrefix = "docksight-platform-"
 	cliPrefix      = "docksight-cli-"
+	agentPrefix    = "docksight-agent-"
 	archiveSuffix  = ".tar.gz"
 
 	// legacyPlatformPrefix is the name used by releases up to v0.0.3, kept so
@@ -81,6 +83,29 @@ func CLIBinary(target Target) Selector {
 		},
 		describe: fmt.Sprintf("%s* for %s", cliPrefix, target),
 	}
+}
+
+// AgentBinary selects the agent executable for one platform. The agent runs
+// on remote Docker hosts and is versioned with the rest of the release.
+func AgentBinary(target Target) Selector {
+
+	return selectorFunc{
+		match: func(asset Asset) bool {
+
+			if !strings.HasPrefix(asset.Name, agentPrefix) {
+				return false
+			}
+
+			return target.matches(asset.Name)
+		},
+		describe: fmt.Sprintf("%s* for %s", agentPrefix, target),
+	}
+}
+
+// AgentBinaryName builds the filename the release pipeline should publish for
+// an agent binary.
+func AgentBinaryName(version string, target Target) string {
+	return agentPrefix + version + "-" + target.String() + target.Extension()
 }
 
 // PlatformBundleName builds the filename the release pipeline should publish

@@ -5,8 +5,8 @@ import (
 
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/installer"
+	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/system"
 	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/system"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +21,11 @@ var installCMD = &cobra.Command{
 
 		ui.Banner()
 
-		if err := system.ValidateSystem(); err != nil {
+		if err := system.Validate(
+			cmd.Context(),
+			consoleReporter{},
+			system.PlatformRequirements(),
+		); err != nil {
 			return err
 		}
 

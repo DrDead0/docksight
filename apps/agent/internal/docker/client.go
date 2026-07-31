@@ -6,9 +6,7 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"time"
 
-	"github.com/Microsoft/go-winio"
 	"github.com/docker/docker/client"
 )
 
@@ -68,14 +66,6 @@ func engineHost(socket string) string {
 		socket = "/var/run/docker.sock"
 	}
 	return "unix://" + socket
-}
-
-func dialDocker(ctx context.Context, socket string) (net.Conn, error) {
-	if runtime.GOOS == "windows" {
-		return winio.DialPipeContext(ctx, socket)
-	}
-	d := net.Dialer{Timeout: 5 * time.Second}
-	return d.DialContext(ctx, "unix", socket)
 }
 
 // Close releases SDK resources.

@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 #
-# Builds the two DockSight release assets.
+# Builds the DockSight release assets.
 #
-#   docksight-platform-<version>.tar.gz   the compose application
-#   docksight-cli-<version>-<os>-<arch>   the CLI, one per target
+#   docksight-platform-<version>.tar.gz     the compose application
+#   docksight-cli-<version>-<os>-<arch>     the CLI, one per target
+#   docksight-agent-<version>-<os>-<arch>   the agent, one per target
 #
-# The two are independent artifacts: the CLI is never packaged inside the
-# platform bundle, and the bundle is never embedded in the CLI. The filenames
-# below must stay in sync with cmd/internal/release/asset.go, which is what
-# the installer uses to discover them.
+# These are independent artifacts: the CLI is never packaged inside the
+# platform bundle, the bundle is never embedded in the CLI, and the agent
+# ships on its own because it is installed on remote Docker hosts. The
+# filenames below must stay in sync with cmd/internal/release/asset.go, which
+# is what the installer uses to discover them.
 #
 # Usage: scripts/build-release.sh v0.0.7
 
@@ -24,6 +26,7 @@ fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUNDLE="$ROOT/bundle"
 CLI_DIR="$ROOT/apps/cli"
+AGENT_DIR="$ROOT/apps/agent"
 MODULE="github.com/rodriguecyber/docksight/apps/cli"
 OUT="${DOCKSIGHT_RELEASE_DIR:-$ROOT/release}"
 
@@ -76,6 +79,35 @@ for target in $TARGETS; do
 	GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -C "$CLI_DIR" \
 		-ldflags "-s -w -X $MODULE/cmd/internal/buildinfo.Version=$VERSION" \
 		-o "$binary" .
+
+	# Building on a filesystem without a Unix execute bit (NTFS) produces a
+	# 644 binary, and scp preserves that mode all the way to the server.
+	chmod +x "$binary" 2>/dev/null || true
+
+	echo "built $(basename "$binary")"
+done
+
+# ---------------------------------------------------------------------------
+# Agent binaries
+#
+# The agent is its own Go module and runs on remote Docker hosts, so it is
+# built only for the platforms an agent can run on — no darwin, no windows.
+# ---------------------------------------------------------------------------
+
+AGENT_TARGETS="linux/amd64 linux/arm64"
+
+for target in $AGENT_TARGETS; do
+
+	os="${target%/*}"
+	arch="${target#*/}"
+
+	binary="$OUT/docksight-agent-$VERSION-$os-$arch"
+
+	GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -C "$AGENT_DIR" \
+		-ldflags "-s -w" \
+		-o "$binary" ./cmd/agent
+
+	chmod +x "$binary" 2>/dev/null || true
 
 	echo "built $(basename "$binary")"
 done

@@ -48,6 +48,11 @@ func (r *Release) CLIBinary(target Target) (*Asset, error) {
 	return r.Find(CLIBinary(target))
 }
 
+// AgentBinary returns the agent executable built for the given target.
+func (r *Release) AgentBinary(target Target) (*Asset, error) {
+	return r.Find(AgentBinary(target))
+}
+
 func (r *Release) assetNames() string {
 
 	if len(r.Assets) == 0 {
