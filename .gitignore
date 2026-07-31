@@ -54,6 +54,10 @@ agent/vendor/
 *.test
 *.out
 
+# Release artifacts — built by scripts/build-release.sh and uploaded to the
+# GitHub release. They are outputs, not sources: rebuildable from any tag.
+release/
+
 # Docker
 *.pid
 
