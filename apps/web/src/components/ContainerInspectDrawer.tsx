@@ -18,7 +18,7 @@ import { Drawer, DrawerSection } from '@/components/ui/drawer'
 import { Skeleton, SkeletonText } from '@/components/ui/skeleton'
 import { useContainerInspect } from '@/hooks/useContainerInspect'
 import { formatDateTime, formatRelativeTime, shortId } from '@/lib/format'
-import { mockEntrypoint, mockEnvVars, mockNetworkDetails } from '@/lib/mock'
+import { mockEnvVars, mockNetworkDetails } from '@/lib/mock'
 import { ApiError } from '@/services/api'
 import type { ContainerAction } from '@/types/api'
 import type { ContainerRow } from '@/components/ContainerTable'
@@ -234,6 +234,15 @@ export function ContainerInspectDrawer({
                   mono: true,
                 },
                 {
+                  label: 'Entrypoint',
+                  value:
+                    details.entrypoint?.length > 0
+                      ? details.entrypoint.join(' ')
+                      : 'None',
+                  mono: true,
+                  copy: details.entrypoint?.join(' '),
+                },
+                {
                   label: 'Command',
                   value:
                     details.cmd?.length > 0 ? details.cmd.join(' ') : 'None',
@@ -242,18 +251,6 @@ export function ContainerInspectDrawer({
                 },
               ]}
             />
-
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Entrypoint
-                </span>
-                <MockBadge title="The agent's inspect projection does not include Config.Entrypoint yet" />
-              </div>
-              <p className="rounded-md border border-dashed border-border bg-secondary/40 px-3 py-2 font-mono text-[13px] text-muted-foreground">
-                {mockEntrypoint(details.id).join(' ')}
-              </p>
-            </div>
           </DrawerSection>
 
           <EnvironmentSection containerId={details.id} />

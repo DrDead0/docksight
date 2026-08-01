@@ -184,13 +184,6 @@ export function mockEnvVars(containerId: string): MockEnvVar[] {
   ]
 }
 
-export function mockEntrypoint(containerId: string): string[] {
-  const rand = pseudoRandom(`entry:${containerId}`)
-  return rand() > 0.5
-    ? ['/docker-entrypoint.sh']
-    : ['/bin/sh', '-c', 'exec /app/server']
-}
-
 export function mockNetworkDetails(networkName: string): {
   gateway: string
   dns: string[]

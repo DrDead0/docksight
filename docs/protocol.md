@@ -316,7 +316,8 @@ Agent                                 Server
       "networks": [],
       "workingDir": "",
       "cmd": ["nginx", "-g", "daemon off;"],
-      "restartPolicy": "unless-stopped"
+      "restartPolicy": "unless-stopped",
+      "entrypoint": ["/docker-entrypoint.sh"]
     },
     "ok": true,
     "error": null
