@@ -75,6 +75,7 @@ export type ContainerInspect = {
   cmd: string[]
   restartPolicy: string
   entrypoint: string[]
+  env:   string[]
 }
 
 export type ContainerInspectResult = {

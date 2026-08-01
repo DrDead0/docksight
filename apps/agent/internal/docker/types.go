@@ -57,4 +57,5 @@ type ContainerInspect struct {
 	Cmd           []string  `json:"cmd"`
 	RestartPolicy string    `json:"restartPolicy"`
 	Entrypoint    []string  `json:"entrypoint"`
+	Env           []string  `json:"env"`
 }

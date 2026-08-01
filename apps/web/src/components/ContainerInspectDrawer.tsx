@@ -18,7 +18,7 @@ import { Drawer, DrawerSection } from '@/components/ui/drawer'
 import { Skeleton, SkeletonText } from '@/components/ui/skeleton'
 import { useContainerInspect } from '@/hooks/useContainerInspect'
 import { formatDateTime, formatRelativeTime, shortId } from '@/lib/format'
-import { mockEnvVars, mockNetworkDetails } from '@/lib/mock'
+import {  mockNetworkDetails } from '@/lib/mock'
 import { ApiError } from '@/services/api'
 import type { ContainerAction } from '@/types/api'
 import type { ContainerRow } from '@/components/ContainerTable'
@@ -34,6 +34,11 @@ type ContainerInspectDrawerProps = {
   busyKey?: string | null
   /** Cosmetic gate; the API still enforces ADMIN on lifecycle routes. */
   canManage?: boolean
+}
+
+const hideValue = (key:string) =>{
+  const lower_key = key.toLocaleLowerCase()
+return  lower_key.includes("pass") || lower_key.includes("database_url")||lower_key.includes("db_url")  ||  lower_key.includes("key") || lower_key.includes("token") || lower_key.includes("secret") || lower_key.includes("auth") || lower_key.includes("cred") || lower_key.includes("private") || lower_key.includes("certificate") || lower_key.includes("cert") || lower_key.includes("ssh") || lower_key.includes("rsa") || lower_key.includes("pem") || lower_key.includes("pfx") || lower_key.includes("p12") || lower_key.includes("p7b") || lower_key.includes("p7c") || lower_key.includes("p7m") || lower_key.includes("p7s") || lower_key.includes("p7r") || lower_key.includes("p7t") || lower_key.includes("p7u") || lower_key.includes("p7v") || lower_key.includes("p7w") || lower_key.includes("p7x") || lower_key.includes("p7y") || lower_key.includes("p7z")
 }
 
 export function ContainerInspectDrawer({
@@ -253,7 +258,7 @@ export function ContainerInspectDrawer({
             />
           </DrawerSection>
 
-          <EnvironmentSection containerId={details.id} />
+          <EnvironmentSection env={details.env} />
 
           <DrawerSection title={`Ports (${details.ports.length})`}>
             <MiniTable
@@ -334,17 +339,13 @@ export function ContainerInspectDrawer({
   )
 }
 
-function EnvironmentSection({ containerId }: { containerId: string }) {
+function EnvironmentSection({ env}: { env: string[] }) {
   const [revealed, setRevealed] = useState(false)
-  // MOCK: `ContainerInspect` has no Config.Env projection yet.
-  const vars = mockEnvVars(containerId)
-
   return (
     <DrawerSection
-      title={`Environment variables (${vars.length})`}
+      title={`Environment variables (${env.length})`}
       action={
         <div className="flex items-center gap-2">
-          <MockBadge title="Env vars are not part of the agent inspect payload yet" />
           <Button
             type="button"
             variant="ghost"
@@ -362,18 +363,18 @@ function EnvironmentSection({ containerId }: { containerId: string }) {
       }
     >
       <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
-        {vars.map((entry) => (
+        {env.map((entry, index) => (
           <div
-            key={entry.key}
+            key={index}
             className="group flex items-center gap-3 px-3 py-2 text-[13px] transition-colors hover:bg-accent/50"
           >
             <span className="w-40 shrink-0 truncate font-mono font-medium">
-              {entry.key}
+              {entry.split('=')[0]}
             </span>
             <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
-              {entry.masked && !revealed ? '••••••••••••' : entry.value}
+              {hideValue(entry.split('=')[0]) && !revealed ? '••••••••••••' : entry.split('=')[1]}
             </span>
-            <CopyButton value={`${entry.key}=${entry.value}`} label="Copy" />
+            <CopyButton value={`${entry.split('=')[1]}=${entry.split('=')[1]}`} label="Copy" />
           </div>
         ))}
       </div>

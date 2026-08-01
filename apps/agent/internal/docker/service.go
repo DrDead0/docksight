@@ -243,6 +243,7 @@ func mapContainerInspect(container types.ContainerJSON) *ContainerInspect {
 		Cmd:           container.Config.Cmd,
 		RestartPolicy: string(container.HostConfig.RestartPolicy.Name),
 		Entrypoint:    container.Config.Entrypoint,
+		Env:           container.Config.Env,
 	}
 }
 
