@@ -222,6 +222,86 @@ func TestConfigFileIsNotWorldReadable(t *testing.T) {
 	}
 }
 
+// An update reads the platform URL back rather than asking for it again.
+func TestReadServerURL(t *testing.T) {
+
+	layout := DefaultLayout()
+	layout.ConfigDir = t.TempDir()
+
+	if err := WriteConfig(layout, "wss://platform.example.com/agents"); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := ReadServerURL(layout)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got != "wss://platform.example.com/agents" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+// A hand-edited config must still be readable: unquoted values, comments and
+// a docker section that also has no url key.
+func TestReadServerURLHandEdited(t *testing.T) {
+
+	layout := DefaultLayout()
+	layout.ConfigDir = t.TempDir()
+
+	content := `# DockSight Agent configuration
+
+agent:
+  data_dir: /etc/docksight-agent
+
+server:
+  # the platform
+  url: ws://10.0.0.5:2002/agents
+
+docker:
+  socket: /var/run/docker.sock
+`
+
+	if err := os.WriteFile(layout.ConfigPath(), []byte(content), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := ReadServerURL(layout)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got != "ws://10.0.0.5:2002/agents" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestReadServerURLMissingInstall(t *testing.T) {
+
+	layout := DefaultLayout()
+	layout.ConfigDir = t.TempDir()
+
+	if _, err := ReadServerURL(layout); err == nil {
+		t.Fatal("expected an error with no config present")
+	}
+}
+
+func TestReadServerURLMissingKey(t *testing.T) {
+
+	layout := DefaultLayout()
+	layout.ConfigDir = t.TempDir()
+
+	if err := os.WriteFile(layout.ConfigPath(), []byte("agent:\n  data_dir: /x\n"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := ReadServerURL(layout); err == nil {
+		t.Fatal("expected an error when server.url is absent")
+	}
+}
+
 func TestIdentityExists(t *testing.T) {
 
 	layout := DefaultLayout()

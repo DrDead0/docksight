@@ -1,6 +1,7 @@
 package install
 
 import (
+	"bufio"
 	"fmt"
 	"net/url"
 	"os"
@@ -193,6 +194,62 @@ func WriteConfig(layout Layout, serverURL string) error {
 	}
 
 	return nil
+}
+
+// ReadServerURL returns the platform URL recorded in an existing
+// installation, so an update does not require the operator to retype it.
+//
+// This reads the one key it needs rather than unmarshalling YAML: the CLI has
+// no YAML dependency, and a config the agent accepts but this cannot parse
+// would block updates for no good reason.
+func ReadServerURL(layout Layout) (string, error) {
+
+	file, err := os.Open(layout.ConfigPath())
+
+	if err != nil {
+		return "", err
+	}
+
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	inServer := false
+
+	for scanner.Scan() {
+
+		line := scanner.Text()
+
+		trimmed := strings.TrimSpace(line)
+
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		// A key at column zero starts a new top-level section.
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+			inServer = strings.HasPrefix(trimmed, "server:")
+			continue
+		}
+
+		if !inServer {
+			continue
+		}
+
+		value, found := strings.CutPrefix(trimmed, "url:")
+
+		if !found {
+			continue
+		}
+
+		return strings.Trim(strings.TrimSpace(value), `"'`), nil
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	return "", fmt.Errorf("no server.url found in %s", layout.ConfigPath())
 }
 
 // IdentityExists reports whether this host has already registered.

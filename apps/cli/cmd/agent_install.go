@@ -10,7 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var agentPlatformURL string
+var (
+	agentPlatformURL string
+	agentVersion     string
+)
 
 var agentInstallCMD = &cobra.Command{
 	Use:   "install",
@@ -36,6 +39,7 @@ var agentInstallCMD = &cobra.Command{
 		ui.Info("Platform:      " + serverURL)
 
 		installer := install.New(layout, serverURL, consoleReporter{})
+		installer.Version = agentVersion
 
 		health, err := installer.Install(cmd.Context())
 
@@ -92,6 +96,13 @@ func init() {
 		"url",
 		"",
 		"DockSight platform URL, e.g. https://platform.example.com",
+	)
+
+	agentInstallCMD.Flags().StringVar(
+		&agentVersion,
+		"version",
+		"",
+		"install a specific release tag instead of the latest, e.g. v0.0.12",
 	)
 
 	agentCMD.AddCommand(agentInstallCMD)

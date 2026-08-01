@@ -50,6 +50,12 @@ type Installer struct {
 	// Target selects the agent build. Defaults to this host.
 	Target release.Target
 
+	// Version pins the release to install. Empty means the latest published
+	// release, which is what a first install wants; pinning matters when an
+	// agent must match a platform that has not been updated yet, or when a
+	// bad build has to be rolled back on one host without touching the rest.
+	Version string
+
 	// Settle is how long to wait for the service to prove it stays up.
 	Settle time.Duration
 
@@ -88,14 +94,14 @@ func (i *Installer) Install(ctx context.Context) (*Health, error) {
 	}
 
 	// Phase 2 — locate and download the release
-	latest, err := i.latestRelease(ctx)
+	target, err := i.resolveRelease(ctx)
 
 	if err != nil {
 		return nil, err
 	}
 
 	// Phase 3 — install the binary
-	if err := i.downloadBinary(ctx, latest); err != nil {
+	if err := i.downloadBinary(ctx, target); err != nil {
 		return nil, fail(PhaseDownload, err, "")
 	}
 
@@ -136,7 +142,28 @@ func (i *Installer) validate(ctx context.Context) error {
 	return nil
 }
 
-func (i *Installer) latestRelease(ctx context.Context) (*release.Release, error) {
+// resolveRelease returns the release to install: the pinned one when Version
+// is set, the latest published otherwise.
+func (i *Installer) resolveRelease(ctx context.Context) (*release.Release, error) {
+
+	if i.Version != "" {
+
+		i.Report.Step("Fetching release " + i.Version)
+
+		pinned, err := i.Releases.ByTag(ctx, i.Version)
+
+		if err != nil {
+			return nil, fail(
+				PhaseDownload,
+				err,
+				"Check the tag exists: gh release list",
+			)
+		}
+
+		i.Report.Success("Using release " + pinned.Version())
+
+		return pinned, nil
+	}
 
 	i.Report.Step("Checking the latest DockSight release")
 

@@ -92,9 +92,31 @@ func (f *fakeUnits) Restarts(context.Context, string) (int, error) { return f.re
 
 func (f *fakeUnits) Logs(context.Context, string, int) (string, error) { return f.logs, nil }
 
+// requestedPaths records the API paths the installer asked for. Tests run
+// sequentially and every request completes before Install returns, so a
+// package-level recorder is safe here.
+var requestedPaths []string
+
+func requestedPath(t *testing.T, path string) bool {
+	t.Helper()
+
+	for _, requested := range requestedPaths {
+
+		// Recorded paths carry the repo prefix, e.g.
+		// /repos/rodriguecyber/docksight/releases/latest
+		if strings.HasSuffix(requested, path) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // releaseStub serves a release with an agent binary attached.
 func releaseStub(t *testing.T, version string, withAgent bool) string {
 	t.Helper()
+
+	requestedPaths = nil
 
 	mux := http.NewServeMux()
 
@@ -105,6 +127,8 @@ func releaseStub(t *testing.T, version string, withAgent bool) string {
 	})
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
+		requestedPaths = append(requestedPaths, r.URL.Path)
 
 		assets := fmt.Sprintf(
 			`{"name": %q, "browser_download_url": %q}`,
@@ -412,6 +436,44 @@ func TestInstallReportsUnconfirmedConnection(t *testing.T) {
 
 	if !reporter.contains("warn:") {
 		t.Error("the unconfirmed connection was not surfaced")
+	}
+}
+
+// Pinning must ask GitHub for that tag, not for the latest release.
+func TestInstallPinnedVersion(t *testing.T) {
+
+	installer, _, reporter := harness(t, true)
+
+	installer.Version = "v0.0.5"
+
+	if _, err := installer.Install(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	if !requestedPath(t, "/releases/tags/v0.0.5") {
+		t.Fatalf("the pinned tag was not requested, paths: %v", requestedPaths)
+	}
+
+	if requestedPath(t, "/releases/latest") {
+		t.Error("the latest release was requested despite a pinned version")
+	}
+
+	if !reporter.contains("Fetching release v0.0.5") {
+		t.Error("the pinned version was not reported")
+	}
+}
+
+// Without a pin, the latest release is used.
+func TestInstallUsesLatestByDefault(t *testing.T) {
+
+	installer, _, _ := harness(t, true)
+
+	if _, err := installer.Install(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	if !requestedPath(t, "/releases/latest") {
+		t.Fatalf("the latest release was not requested, paths: %v", requestedPaths)
 	}
 }
 
