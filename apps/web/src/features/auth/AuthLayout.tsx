@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Container } from 'lucide-react'
 
 /**
  * Centered shell for the two pre-session screens (login, first-run setup).
@@ -20,9 +19,13 @@ export function AuthLayout({
       <div className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
           <div className="mb-8 flex flex-col items-center gap-3 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <Container className="h-6 w-6" aria-hidden />
-            </span>
+            <img
+              src="/dicksight.png"
+              alt="DockSight"
+              width={72}
+              height={72}
+              className="h-48 w-48"
+            />
             <div>
               <h1 className="text-section font-semibold tracking-tight">
                 {title}

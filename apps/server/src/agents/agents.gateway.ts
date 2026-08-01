@@ -75,9 +75,7 @@ const COMMAND_TYPE: Record<ContainerAction, string> = {
 };
 
 @WebSocketGateway({ path: '/agents' })
-export class AgentsGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class AgentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(AgentsGateway.name);
   private readonly socketsByUuid = new Map<string, AgentSocket>();
   private readonly pendingLists = new Map<string, PendingList>();
@@ -149,9 +147,7 @@ export class AgentsGateway
       if (previous) {
         clearTimeout(previous.timer);
         this.pendingLists.delete(agentUuid);
-        previous.resolve(
-          this.inventory.getByUuid(agentUuid)?.containers ?? [],
-        );
+        previous.resolve(this.inventory.getByUuid(agentUuid)?.containers ?? []);
       }
 
       const timer = setTimeout(() => {
@@ -189,9 +185,7 @@ export class AgentsGateway
       const timer = setTimeout(() => {
         this.pendingCommands.delete(requestId);
         reject(
-          new Error(
-            `Agent timed out waiting for container.result (${action})`,
-          ),
+          new Error(`Agent timed out waiting for container.result (${action})`),
         );
       }, timeoutMs);
 
@@ -319,10 +313,7 @@ export class AgentsGateway
 
     const client = this.socketsByUuid.get(subscriber.agentUuid);
     if (client && client.readyState === WebSocket.OPEN) {
-      this.send(
-        client,
-        createEnvelope(LOGS_UNSUBSCRIBE, { requestId }),
-      );
+      this.send(client, createEnvelope(LOGS_UNSUBSCRIBE, { requestId }));
     }
 
     this.logger.log(`Sent logs.unsubscribe requestId=${requestId}`);
@@ -403,9 +394,7 @@ export class AgentsGateway
         );
         break;
       case CONTAINER_RESULT:
-        this.handleContainerResult(
-          envelope.payload as ContainerResultPayload,
-        );
+        this.handleContainerResult(envelope.payload as ContainerResultPayload);
         break;
       case CONTAINER_INSPECTED:
         this.handleContainerInspected(

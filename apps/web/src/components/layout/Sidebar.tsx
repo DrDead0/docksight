@@ -63,12 +63,14 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
       >
         <div className="flex h-16 items-center justify-between gap-2 border-b border-border px-5">
           <NavLink to="/dashboard" className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <Container className="h-4.5 w-4.5" aria-hidden />
-            </span>
-            <span className="text-[17px] font-semibold tracking-tight">
-              DockSight
-            </span>
+            <img
+              src="/dicksight.png"
+              alt="DockSight"
+              width={30}
+              height={30}
+              className="h-15 w-15"
+            />
+            
           </NavLink>
           <Button
             type="button"
