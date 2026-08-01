@@ -1,0 +1,14 @@
+# Documentation toolchain.
+#
+#   pip install -r requirements-docs.txt
+#   mkdocs serve      # http://127.0.0.1:8000
+#   mkdocs build      # static site into ./site
+#
+# pymdown-extensions and pygments are floored rather than pinned: older
+# pymdown-extensions releases pass filename=None to newer pygments formatters,
+# which fails the build with "NoneType object has no attribute 'replace'".
+
+mkdocs==1.6.1
+mkdocs-material==9.5.49
+pymdown-extensions>=11.0.1
+pygments>=2.20.0
