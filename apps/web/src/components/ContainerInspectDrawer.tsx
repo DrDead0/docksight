@@ -18,7 +18,6 @@ import { Drawer, DrawerSection } from '@/components/ui/drawer'
 import { Skeleton, SkeletonText } from '@/components/ui/skeleton'
 import { useContainerInspect } from '@/hooks/useContainerInspect'
 import { formatDateTime, formatRelativeTime, shortId } from '@/lib/format'
-import {  mockNetworkDetails } from '@/lib/mock'
 import { ApiError } from '@/services/api'
 import type { ContainerAction } from '@/types/api'
 import type { ContainerRow } from '@/components/ContainerTable'
@@ -302,18 +301,17 @@ export function ContainerInspectDrawer({
 
           <DrawerSection
             title={`Networks (${details.networks.length})`}
-            action={
-              <MockBadge
-                label="Gateway + DNS mocked"
-                title="ContainerNetwork only carries name and ip in the agent protocol"
-              />
-            }
+            // action={
+            //   <MockBadge
+            //     label="Gateway + DNS mocked"
+            //     title="ContainerNetwork only carries name and ip in the agent protocol"
+            //   />
+            // }
           >
             <MiniTable
               headers={['Network', 'IP address', 'Gateway', 'DNS']}
               empty="No networks attached"
               rows={details.networks.map((network) => {
-                const extra = mockNetworkDetails(network.name)
                 return [
                   <span key="name" className="font-medium">
                     {network.name}
@@ -324,10 +322,10 @@ export function ContainerInspectDrawer({
                     )}
                   </span>,
                   <span key="gateway" className="font-mono text-muted-foreground">
-                    {extra.gateway}
+                    {network.gateway }
                   </span>,
                   <span key="dns" className="font-mono text-muted-foreground">
-                    {extra.dns.join(', ')}
+                    {network.dns.join(', ')}
                   </span>,
                 ]
               })}

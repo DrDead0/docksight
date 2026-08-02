@@ -217,6 +217,8 @@ func mapContainerNetworks(networks map[string]*network.EndpointSettings) []Netwo
 		result = append(result, Network{
 			Name: name,
 			IP:   settings.IPAddress,
+			Gateway: settings.Gateway,
+			DNS: settings.DNSNames,
 		})
 	}
 	return result
@@ -244,6 +246,7 @@ func mapContainerInspect(container types.ContainerJSON) *ContainerInspect {
 		RestartPolicy: string(container.HostConfig.RestartPolicy.Name),
 		Entrypoint:    container.Config.Entrypoint,
 		Env:           container.Config.Env,
+		
 	}
 }
 

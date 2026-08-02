@@ -40,6 +40,8 @@ type State struct {
 type Network struct {
 	Name string `json:"name"`
 	IP   string `json:"ip"`
+	Gateway string   `json:"gateway"`
+	DNSNames     []string `json:"dns"`
 }
 
 type ContainerInspect struct {
@@ -58,4 +60,5 @@ type ContainerInspect struct {
 	RestartPolicy string    `json:"restartPolicy"`
 	Entrypoint    []string  `json:"entrypoint"`
 	Env           []string  `json:"env"`
+	
 }

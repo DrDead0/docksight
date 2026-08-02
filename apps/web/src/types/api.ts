@@ -58,6 +58,8 @@ export type ContainerStateDetails = {
 export type ContainerNetwork = {
   name: string
   ip: string
+  gateway: string
+  dns: string[]
 }
 
 export type ContainerInspect = {

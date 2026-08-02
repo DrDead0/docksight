@@ -65,9 +65,7 @@ export class HostsService {
     return {
       hostId: agent.id,
       containers,
-      updatedAt: snapshot?.updatedAt
-        ? snapshot.updatedAt.toISOString()
-        : null,
+      updatedAt: snapshot?.updatedAt ? snapshot.updatedAt.toISOString() : null,
     };
   }
 }
