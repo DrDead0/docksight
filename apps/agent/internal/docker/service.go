@@ -215,10 +215,10 @@ func mapContainerNetworks(networks map[string]*network.EndpointSettings) []Netwo
 	result := make([]Network, 0, len(networks))
 	for name, settings := range networks {
 		result = append(result, Network{
-			Name: name,
-			IP:   settings.IPAddress,
-			Gateway: settings.Gateway,
-			DNS: settings.DNSNames,
+			Name:     name,
+			IP:       settings.IPAddress,
+			Gateway:  settings.Gateway,
+			DNSNames: settings.DNSNames,
 		})
 	}
 	return result

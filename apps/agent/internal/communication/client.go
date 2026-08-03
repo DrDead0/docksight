@@ -11,6 +11,7 @@ import (
 	"docksight-agent/internal/docker"
 	"docksight-agent/internal/logger"
 	"docksight-agent/internal/logs"
+	"docksight-agent/internal/metrics"
 
 	"github.com/gorilla/websocket"
 )
@@ -30,6 +31,7 @@ const (
 	TypeLogsSubscribe      = "logs.subscribe"
 	TypeLogsUnsubscribe    = "logs.unsubscribe"
 	TypeLogsChunk          = "logs.chunk"
+	TypeMetricsHost        = "metrics.host"
 )
 
 // Envelope is the JSON message wrapper exchanged with the DockSight server.
@@ -58,6 +60,14 @@ type RegisteredPayload struct {
 // HeartbeatPayload is sent on agent.heartbeat.
 type HeartbeatPayload struct {
 	UUID string `json:"uuid"`
+}
+
+// HostMetricsPayload is sent on metrics.host.
+type HostMetricsPayload struct {
+	UUID        string         `json:"uuid"`
+	CollectedAt string         `json:"collectedAt"`
+	CPU         metrics.CPU    `json:"cpu"`
+	Memory      metrics.Memory `json:"memory"`
 }
 
 // ContainerSummary matches protocol container discovery fields.
@@ -132,7 +142,9 @@ type Client struct {
 	info           AgentInfo
 	docker         *docker.Service
 	logs           *logs.Service
+	metrics        *metrics.Collector
 	heartbeatEvery time.Duration
+	metricsEvery   time.Duration
 	reconnectWait  time.Duration
 	writeMu        sync.Mutex
 	connMu         sync.RWMutex
@@ -151,7 +163,9 @@ func NewClient(
 		info:           info,
 		docker:         dockerService,
 		logs:           logsService,
+		metrics:        metrics.NewCollector(),
 		heartbeatEvery: 30 * time.Second,
+		metricsEvery:   10 * time.Second,
 		reconnectWait:  5 * time.Second,
 	}
 	if logsService != nil {
@@ -306,6 +320,14 @@ func (c *Client) serve(ctx context.Context, conn *websocket.Conn) error {
 	ticker := time.NewTicker(c.heartbeatEvery)
 	defer ticker.Stop()
 
+	metricsTicker := time.NewTicker(c.metricsEvery)
+	defer metricsTicker.Stop()
+
+	// The first CPU reading covers the time since boot, which is meaningless as
+	// a "current usage" number; discard it so the first sent sample is a real
+	// interval delta.
+	c.metrics.Prime(ctx)
+
 	incoming := make(chan Envelope, 16)
 	errCh := make(chan error, 1)
 
@@ -348,6 +370,12 @@ func (c *Client) serve(ctx context.Context, conn *websocket.Conn) error {
 				return err
 			}
 			logger.Debug("heartbeat sent", "uuid", c.info.UUID)
+		case <-metricsTicker.C:
+			// A metrics hiccup should not tear down the session the way a failed
+			// heartbeat does, so this only warns.
+			if err := c.sendHostMetrics(ctx, conn); err != nil {
+				logger.Warn("host metrics not sent", "error", err.Error())
+			}
 		}
 	}
 }
@@ -567,6 +595,33 @@ func (c *Client) sendHeartbeat(conn *websocket.Conn) error {
 		return err
 	}
 	return c.write(conn, Envelope{Type: TypeHeartbeat, Payload: payload})
+}
+
+func (c *Client) sendHostMetrics(ctx context.Context, conn *websocket.Conn) error {
+	snapshot, err := c.metrics.Collect(ctx)
+	if err != nil {
+		return fmt.Errorf("collect host metrics: %w", err)
+	}
+
+	payload, err := json.Marshal(HostMetricsPayload{
+		UUID:        c.info.UUID,
+		CollectedAt: time.Now().UTC().Format(time.RFC3339),
+		CPU:         snapshot.CPU,
+		Memory:      snapshot.Memory,
+	})
+	if err != nil {
+		return err
+	}
+
+	if err := c.write(conn, Envelope{Type: TypeMetricsHost, Payload: payload}); err != nil {
+		return err
+	}
+
+	logger.Debug("host metrics sent",
+		"cpuPercent", snapshot.CPU.UsagePercent,
+		"memoryPercent", snapshot.Memory.UsagePercent,
+	)
+	return nil
 }
 
 func (c *Client) write(conn *websocket.Conn, env Envelope) error {
