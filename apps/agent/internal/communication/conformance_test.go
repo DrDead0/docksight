@@ -1,0 +1,122 @@
+package communication
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
+)
+
+// fixturesDir is the shared protocol contract, four levels up from this package.
+const fixturesDir = "../../../../packages/protocol/fixtures"
+
+// TestHostMetricsMatchesProtocolFixture guards the one contract no compiler can
+// check: the Go payload structs are hand-mirrored from @docksight/protocol, so
+// a renamed or dropped field would silently change the wire format.
+//
+// Each fixture is decoded into the Go struct and re-encoded; the result must be
+// byte-equivalent (as JSON) to the fixture. A field the struct does not know
+// about is dropped on re-encode, and a renamed field appears under the wrong
+// key — either way the comparison fails.
+func TestHostMetricsMatchesProtocolFixture(t *testing.T) {
+	fixtures := []string{
+		"metrics.host.linux.json",
+		"metrics.host.windows.json",
+	}
+
+	for _, name := range fixtures {
+		t.Run(name, func(t *testing.T) {
+			raw, err := os.ReadFile(filepath.Join(fixturesDir, name))
+			if err != nil {
+				t.Fatalf("read fixture: %v", err)
+			}
+
+			var envelope struct {
+				Type    string          `json:"type"`
+				Payload json.RawMessage `json:"payload"`
+			}
+			if err := json.Unmarshal(raw, &envelope); err != nil {
+				t.Fatalf("decode envelope: %v", err)
+			}
+
+			if envelope.Type != TypeMetricsHost {
+				t.Errorf("envelope type = %q, want %q", envelope.Type, TypeMetricsHost)
+			}
+
+			var payload HostMetricsPayload
+			if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
+				t.Fatalf("decode payload into HostMetricsPayload: %v", err)
+			}
+
+			roundTripped, err := json.Marshal(payload)
+			if err != nil {
+				t.Fatalf("re-encode payload: %v", err)
+			}
+
+			want := normalize(t, envelope.Payload)
+			got := normalize(t, roundTripped)
+			if !reflect.DeepEqual(want, got) {
+				t.Errorf(
+					"payload does not round-trip through the Go structs.\n fixture: %s\n go:      %s\n"+
+						"The Go structs in client.go have drifted from packages/protocol.",
+					mustJSON(t, want), mustJSON(t, got),
+				)
+			}
+		})
+	}
+}
+
+// TestHostMetricsFieldsArePopulated ensures the round-trip test is not passing
+// because everything decoded into zero values.
+func TestHostMetricsFieldsArePopulated(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join(fixturesDir, "metrics.host.linux.json"))
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+
+	var envelope struct {
+		Payload HostMetricsPayload `json:"payload"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	p := envelope.Payload
+	if p.UUID == "" {
+		t.Error("uuid did not decode")
+	}
+	if p.CollectedAt == "" {
+		t.Error("collectedAt did not decode")
+	}
+	if p.CPU.UsagePercent == 0 || p.CPU.Cores == 0 {
+		t.Errorf("cpu did not decode: %+v", p.CPU)
+	}
+	if p.CPU.LoadAvg == nil {
+		t.Error("loadAvg did not decode on the linux fixture")
+	}
+	if p.Memory.TotalBytes == 0 || p.Memory.UsedBytes == 0 ||
+		p.Memory.AvailableBytes == 0 || p.Memory.UsagePercent == 0 {
+		t.Errorf("memory did not decode: %+v", p.Memory)
+	}
+}
+
+// normalize decodes JSON into generic maps so comparison ignores key order and
+// integer/float formatting differences.
+func normalize(t *testing.T, data []byte) map[string]any {
+	t.Helper()
+	var out map[string]any
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatalf("normalize: %v", err)
+	}
+	return out
+}
+
+func mustJSON(t *testing.T, value any) string {
+	t.Helper()
+	out, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	return string(out)
+}

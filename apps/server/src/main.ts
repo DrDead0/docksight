@@ -41,4 +41,4 @@ async function bootstrap() {
   console.log(`Agent WebSocket endpoint at ws://localhost:${port}/agents`);
 }
 
-bootstrap();
+void bootstrap();

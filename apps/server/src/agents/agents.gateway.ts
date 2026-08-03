@@ -357,7 +357,7 @@ export class AgentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private async handleMessage(client: AgentSocket, data: RawData) {
     let parsed: unknown;
     try {
-      parsed = JSON.parse(data.toString()) as unknown;
+      parsed = JSON.parse(decodeRawData(data)) as unknown;
     } catch {
       this.send(
         client,
@@ -599,4 +599,19 @@ export class AgentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.send(JSON.stringify(envelope));
     }
   }
+}
+
+/**
+ * `RawData` is `Buffer | ArrayBuffer | Buffer[]`. A bare `.toString()` yields
+ * `[object ArrayBuffer]` for the second form and comma-joins the third, so each
+ * shape is decoded explicitly.
+ */
+function decodeRawData(data: RawData): string {
+  if (Array.isArray(data)) {
+    return Buffer.concat(data).toString('utf8');
+  }
+  if (Buffer.isBuffer(data)) {
+    return data.toString('utf8');
+  }
+  return Buffer.from(data).toString('utf8');
 }

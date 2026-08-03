@@ -1,0 +1,53 @@
+name: Agent
+
+# The protocol fixtures are part of the agent's contract, so a change to them
+# must re-run the conformance test even when no Go file changed.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/agent/**'
+      - 'packages/protocol/fixtures/**'
+      - '.github/workflows/agent.yml'
+  pull_request:
+    paths:
+      - 'apps/agent/**'
+      - 'packages/protocol/fixtures/**'
+      - '.github/workflows/agent.yml'
+
+jobs:
+  build:
+    name: build & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: apps/agent/go.sum
+
+      - name: Verify go.mod is tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Cross-compile release targets
+        run: |
+          for target in linux/amd64 linux/arm64 windows/amd64 darwin/arm64; do
+            echo "building $target"
+            CGO_ENABLED=0 GOOS=${target%/*} GOARCH=${target#*/} \
+              go build -o /dev/null ./cmd/agent
+          done

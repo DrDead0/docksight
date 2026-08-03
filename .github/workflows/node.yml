@@ -1,0 +1,64 @@
+name: Server & Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/server/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/node.yml'
+  pull_request:
+    paths:
+      - 'apps/server/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/node.yml'
+
+jobs:
+  build:
+    name: build, lint & test
+    runs-on: ubuntu-latest
+    env:
+      # `prisma generate` reads DATABASE_URL through prisma.config.ts but never
+      # connects, so a placeholder is enough and no service container is needed.
+      DATABASE_URL: postgresql://docksight:docksight@localhost:5432/docksight?schema=public
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # apps/server and apps/web import @docksight/protocol from its dist
+      # output, so the shared package has to be built before anything else.
+      - name: Build protocol
+        run: npm run build --workspace=@docksight/protocol
+
+      - name: Protocol conformance (fixtures match the TypeScript types)
+        run: npm run test --workspace=@docksight/protocol
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate --workspace=@docksight/server
+
+      - name: Build server
+        run: npm run build --workspace=@docksight/server
+
+      - name: Lint server
+        run: npm run lint --workspace=@docksight/server
+
+      - name: Test server
+        run: npm run test --workspace=@docksight/server -- --passWithNoTests
+
+      - name: Build web
+        run: npm run build --workspace=@docksight/web
+
+      - name: Lint web
+        run: npm run lint --workspace=@docksight/web
