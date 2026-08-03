@@ -17,10 +17,11 @@
     "db:generate": "npm run prisma:generate --workspace=@docksight/server",
     "db:migrate": "npm run prisma:migrate --workspace=@docksight/server",
     "db:studio": "npm run prisma:studio --workspace=@docksight/server",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f",
-    "docker:infra": "docker compose up -d",
+    "docker:up": "docker compose -f infrastructure/configs/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infrastructure/configs/docker-compose.yml down",
+    "docker:logs": "docker compose -f infrastructure/configs/docker-compose.yml logs -f",
+    "docker:infra": "docker compose -f infrastructure/configs/docker-compose.yml up -d",
+    "test": "npm run test --workspaces --if-present",
     "setup": "node scripts/setup.mjs"
   },
   "engines": {

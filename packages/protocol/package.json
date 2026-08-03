@@ -14,11 +14,13 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "fixtures"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepare": "npm run build",
+    "test": "tsc -p tsconfig.test.json",
     "lint": "echo \"No lint configured yet\""
   },
   "devDependencies": {

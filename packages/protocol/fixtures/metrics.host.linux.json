@@ -1,0 +1,18 @@
+{
+  "type": "metrics.host",
+  "payload": {
+    "uuid": "bc2bc07d-e456-4979-9f11-3293965d7436",
+    "collectedAt": "2026-08-03T14:29:19Z",
+    "cpu": {
+      "usagePercent": 12.5,
+      "cores": 8,
+      "loadAvg": [0.42, 0.35, 0.28]
+    },
+    "memory": {
+      "totalBytes": 16620584960,
+      "usedBytes": 4404019200,
+      "availableBytes": 12216565760,
+      "usagePercent": 26.5
+    }
+  }
+}
