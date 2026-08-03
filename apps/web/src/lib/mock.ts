@@ -8,13 +8,14 @@
  *
  * Real, API-backed data today:
  *   GET  /hosts                         -> host identity + status + lastSeen
+ *                                          + latest host CPU / memory
+ *   GET  /hosts/:id/metrics             -> latest host CPU / memory sample
  *   GET  /hosts/:id/containers          -> id, name, image, status, state
  *   GET  /containers/:id/inspect        -> full docker inspect projection
  *   POST /containers/:id/{start,stop,restart}
  *   SSE  /containers/:id/logs           -> live log entries
  *
  * Still mocked here (no endpoint, no agent message type yet):
- *   - host CPU / memory utilisation          (needs a `host.metrics` message)
  *   - container metric time series           (needs `container.stats`)
  *   - images / networks / volumes inventory  (needs `image.*`/`network.*`/`volume.*`)
  *   - env vars, entrypoint, network gateway + DNS in the inspect drawer
@@ -50,38 +51,6 @@ function pseudoRandom(seed: string): () => number {
 
 function between(rand: () => number, min: number, max: number): number {
   return min + rand() * (max - min)
-}
-
-/* -------------------------------------------------------------------------- */
-/* Host resources                                                             */
-/* -------------------------------------------------------------------------- */
-
-export type MockHostResources = {
-  cpuPercent: number
-  memoryPercent: number
-  memoryUsedBytes: number
-  memoryTotalBytes: number
-  cpuCores: number
-  cpuSeries: number[]
-  memorySeries: number[]
-}
-
-export function mockHostResources(hostId: string): MockHostResources {
-  const rand = pseudoRandom(`host:${hostId}`)
-  const cpuCores = [2, 4, 8, 16][Math.floor(between(rand, 0, 4))] ?? 4
-  const memoryTotalBytes = cpuCores * 2 * 1024 ** 3
-  const cpuPercent = between(rand, 4, 78)
-  const memoryPercent = between(rand, 18, 86)
-
-  return {
-    cpuPercent,
-    memoryPercent,
-    memoryUsedBytes: (memoryTotalBytes * memoryPercent) / 100,
-    memoryTotalBytes,
-    cpuCores,
-    cpuSeries: walk(rand, cpuPercent, 24, 12, 2, 96),
-    memorySeries: walk(rand, memoryPercent, 24, 5, 5, 98),
-  }
 }
 
 /**

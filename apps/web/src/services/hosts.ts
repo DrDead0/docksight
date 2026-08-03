@@ -5,10 +5,15 @@ import type {
   ContainerInspectResult,
   Host,
   HostContainersResponse,
+  HostMetricsResponse,
 } from '@/types/api'
 
 export function fetchHosts(): Promise<Host[]> {
   return apiClient.get<Host[]>('/hosts')
+}
+
+export function fetchHostMetrics(hostId: string): Promise<HostMetricsResponse> {
+  return apiClient.get<HostMetricsResponse>(`/hosts/${hostId}/metrics`)
 }
 
 export function fetchHostContainers(

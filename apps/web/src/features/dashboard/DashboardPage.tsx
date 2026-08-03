@@ -13,8 +13,6 @@ import { ContainerLogsDrawer } from '@/components/ContainerLogsDrawer'
 import { ContainerTable, type ContainerRow } from '@/components/ContainerTable'
 import { HostCard } from '@/components/HostCard'
 import { StatTile } from '@/components/StatTile'
-import { Sparkline } from '@/components/charts/Sparkline'
-import { MockBadge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CardGridSkeleton, TableSkeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -22,7 +20,7 @@ import { useContainerCommands } from '@/hooks/useContainerCommands'
 import { useHostInventory } from '@/hooks/useHostInventory'
 import { useHosts } from '@/hooks/useHosts'
 import { useIsAdmin } from '@/stores/auth'
-import { mockHostResources } from '@/lib/mock'
+import { toHostResources } from '@/lib/metrics'
 import { ApiError } from '@/services/api'
 import { useState } from 'react'
 
@@ -43,16 +41,16 @@ export function DashboardPage() {
     (container) => container.state?.toLowerCase() === 'running',
   ).length
 
-  // MOCK: fleet CPU is averaged from placeholder host resources.
+  // Averaged over hosts that have actually reported; a host whose agent is
+  // offline would otherwise drag the fleet number toward zero.
+  const reporting = hosts
+    .map((host) => toHostResources(host.metrics))
+    .filter((resources) => resources.hasData)
   const fleetCpu =
-    hosts.length > 0
-      ? hosts.reduce(
-          (total, host) => total + mockHostResources(host.id).cpuPercent,
-          0,
-        ) / hosts.length
+    reporting.length > 0
+      ? reporting.reduce((total, resources) => total + resources.cpuPercent, 0) /
+        reporting.length
       : 0
-  const fleetSeries =
-    hosts.length > 0 ? mockHostResources(hosts[0].id).cpuSeries : []
 
   const refreshing = hostsQuery.isFetching || inventory.isFetching
 
@@ -102,15 +100,13 @@ export function DashboardPage() {
         />
         <StatTile
           label="Avg. host CPU"
-          value={`${Math.round(fleetCpu)}%`}
+          value={reporting.length > 0 ? `${Math.round(fleetCpu)}%` : '—'}
           hint={
-            <span className="inline-flex items-center gap-1.5">
-              <MockBadge title="Host metrics are not reported by the agent yet" />
-              placeholder
-            </span>
+            reporting.length > 0
+              ? `Across ${reporting.length} reporting host${reporting.length === 1 ? '' : 's'}`
+              : 'No host is reporting metrics'
           }
           icon={Cpu}
-          chart={<Sparkline values={fleetSeries} />}
         />
       </div>
 

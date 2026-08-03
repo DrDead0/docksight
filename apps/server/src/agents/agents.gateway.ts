@@ -23,6 +23,7 @@ import {
   LOGS_CHUNK,
   LOGS_SUBSCRIBE,
   LOGS_UNSUBSCRIBE,
+  METRICS_HOST,
   createEnvelope,
   isMessageEnvelope,
   type AgentHeartbeatPayload,
@@ -32,9 +33,11 @@ import {
   type ContainerListedPayload,
   type ContainerResultPayload,
   type ContainerSummary,
+  type HostMetricsPayload,
   type LogsChunkPayload,
   type MessageEnvelope,
 } from '@docksight/protocol';
+import { HostMetricsService } from '../metrics/host-metrics.service';
 import { AgentsService } from './agents.service';
 import { ContainerInventoryService } from './container-inventory.service';
 
@@ -86,6 +89,7 @@ export class AgentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly agentsService: AgentsService,
     private readonly inventory: ContainerInventoryService,
+    private readonly hostMetrics: HostMetricsService,
   ) {}
 
   handleConnection(client: AgentSocket, ...args: unknown[]) {
@@ -404,6 +408,9 @@ export class AgentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       case LOGS_CHUNK:
         this.handleLogsChunk(envelope.payload as LogsChunkPayload);
         break;
+      case METRICS_HOST:
+        this.handleHostMetrics(client, envelope.payload as HostMetricsPayload);
+        break;
       default:
         this.logger.warn(`Unknown agent message type: ${envelope.type}`);
     }
@@ -438,6 +445,7 @@ export class AgentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.agentId = result.id;
     this.socketsByUuid.set(result.uuid, client);
     this.inventory.rememberHost(result.id, result.uuid);
+    this.hostMetrics.rememberHost(result.id, result.uuid);
 
     this.logger.log(
       `Agent registered: hostname=${payload.hostname} uuid=${result.uuid}`,
@@ -544,6 +552,25 @@ export class AgentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ok: Boolean(payload.ok),
       error: payload.error ?? null,
     });
+  }
+
+  private handleHostMetrics(client: AgentSocket, payload: HostMetricsPayload) {
+    const uuid = client.agentUuid ?? payload?.uuid;
+    if (!uuid || !payload?.cpu || !payload?.memory) {
+      this.logger.warn('Ignored malformed metrics.host payload');
+      return;
+    }
+
+    const stored = this.hostMetrics.set(uuid, payload, client.agentId);
+    if (!stored) {
+      this.logger.warn(`No host mapping for metrics.host uuid=${uuid}`);
+      return;
+    }
+
+    // Debug level: this fires every 10s per connected agent.
+    this.logger.debug(
+      `Received metrics.host uuid=${uuid} cpu=${payload.cpu.usagePercent}% mem=${payload.memory.usagePercent}%`,
+    );
   }
 
   private handleLogsChunk(payload: LogsChunkPayload) {

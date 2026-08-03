@@ -64,7 +64,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
         <div className="flex h-16 items-center justify-between gap-2 border-b border-border px-5">
           <NavLink to="/dashboard" className="flex items-center gap-2.5">
             <img
-              src="/dicksight.png"
+              src="/docksight.png"
               alt="DockSight"
               width={30}
               height={30}

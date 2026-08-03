@@ -45,6 +45,7 @@ import {
 } from '@/features/inventory/InventoryTables'
 import { useContainerCommands } from '@/hooks/useContainerCommands'
 import { useContainers } from '@/hooks/useContainers'
+import { useHostMetrics } from '@/hooks/useHostMetrics'
 import { useHosts } from '@/hooks/useHosts'
 import { useIsAdmin } from '@/stores/auth'
 import {
@@ -53,7 +54,7 @@ import {
   formatRelativeTime,
   osLabel,
 } from '@/lib/format'
-import { mockHostResources } from '@/lib/mock'
+import type { HostResources } from '@/lib/metrics'
 
 type TabKey =
   | 'overview'
@@ -83,6 +84,7 @@ export function HostDetailsPage() {
   const host = hostsQuery.data?.find((entry) => entry.id === hostId)
   const containersQuery = useContainers(hostId)
   const containers = containersQuery.data?.containers ?? []
+  const { resources } = useHostMetrics(hostId)
 
   const [inspecting, setInspecting] = useState<ContainerRow | null>(null)
   const [viewingLogs, setViewingLogs] = useState<ContainerRow | null>(null)
@@ -150,8 +152,6 @@ export function HostDetailsPage() {
     )
   }
 
-  // MOCK: host CPU / memory utilisation.
-  const resources = mockHostResources(host.id)
   const refreshing = hostsQuery.isFetching || containersQuery.isFetching
 
   return (
@@ -305,7 +305,7 @@ function OverviewTab({
   host: NonNullable<ReturnType<typeof useHosts>['data']>[number]
   containerCount: number
   runningCount: number
-  resources: ReturnType<typeof mockHostResources>
+  resources: HostResources
   updatedAt: string | null
   onOpenContainers: () => void
 }) {
@@ -327,22 +327,26 @@ function OverviewTab({
         />
         <StatTile
           label="CPU"
-          value={`${Math.round(resources.cpuPercent)}%`}
+          value={
+            resources.hasData ? `${Math.round(resources.cpuPercent)}%` : '—'
+          }
           hint={
-            <span className="inline-flex items-center gap-1.5">
-              <MockBadge /> {resources.cpuCores} cores
-            </span>
+            resources.hasData
+              ? `${resources.cpuCores} cores`
+              : 'Awaiting agent sample'
           }
           icon={Cpu}
           chart={<Sparkline values={resources.cpuSeries} />}
         />
         <StatTile
           label="Memory"
-          value={formatBytes(resources.memoryUsedBytes)}
+          value={
+            resources.hasData ? formatBytes(resources.memoryUsedBytes) : '—'
+          }
           hint={
-            <span className="inline-flex items-center gap-1.5">
-              <MockBadge /> of {formatBytes(resources.memoryTotalBytes)}
-            </span>
+            resources.hasData
+              ? `of ${formatBytes(resources.memoryTotalBytes)}`
+              : 'Awaiting agent sample'
           }
           icon={MemoryStick}
           chart={<Sparkline values={resources.memorySeries} />}
@@ -378,28 +382,38 @@ function OverviewTab({
 
         <Card>
           <CardHeader>
-            <CardTitle action={<MockBadge />}>Resources</CardTitle>
+            <CardTitle>Resources</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <Meter
-              label={`CPU · ${resources.cpuCores} cores`}
-              value={resources.cpuPercent}
-            />
-            <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xs text-muted-foreground">Memory</span>
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {formatBytes(resources.memoryUsedBytes)} /{' '}
-                  {formatBytes(resources.memoryTotalBytes)}
-                </span>
-              </div>
-              <Meter value={resources.memoryPercent} />
-            </div>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Host utilisation needs a <code className="font-mono">host.metrics</code>{' '}
-              message in the agent protocol. Until then these bars are
-              placeholders.
-            </p>
+            {resources.hasData ? (
+              <>
+                <Meter
+                  label={`CPU · ${resources.cpuCores} cores`}
+                  value={resources.cpuPercent}
+                />
+                <div className="space-y-1.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">Memory</span>
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {formatBytes(resources.memoryUsedBytes)} /{' '}
+                      {formatBytes(resources.memoryTotalBytes)}
+                    </span>
+                  </div>
+                  <Meter value={resources.memoryPercent} />
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {resources.loadAvg
+                    ? `Load average ${resources.loadAvg.map((entry) => entry.toFixed(2)).join(' · ')} — `
+                    : ''}
+                  sampled {formatRelativeTime(resources.collectedAt)}.
+                </p>
+              </>
+            ) : (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                No sample yet. A connected agent pushes{' '}
+                <code className="font-mono">metrics.host</code> every 10 seconds.
+              </p>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -518,7 +532,7 @@ function MetricsTab({
 }: {
   hostId: string
   containers: ContainerRow[]
-  resources: ReturnType<typeof mockHostResources>
+  resources: HostResources
 }) {
   const [selectedId, setSelectedId] = useState<string | undefined>()
   // The container list arrives after first render, so fall back to the first
@@ -531,28 +545,40 @@ function MetricsTab({
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle action={<MockBadge />}>Host CPU</CardTitle>
+            <CardTitle>Host CPU</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-3xl font-semibold tabular-nums">
-              {Math.round(resources.cpuPercent)}%
+              {resources.hasData ? `${Math.round(resources.cpuPercent)}%` : '—'}
             </p>
             <Sparkline values={resources.cpuSeries} height={56} />
+            <p className="text-xs text-muted-foreground">
+              {resources.hasData
+                ? `${resources.cpuCores} cores · sampled ${formatRelativeTime(resources.collectedAt)}`
+                : 'Awaiting the first agent sample'}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle action={<MockBadge />}>Host memory</CardTitle>
+            <CardTitle>Host memory</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-3xl font-semibold tabular-nums">
-              {Math.round(resources.memoryPercent)}%
+              {resources.hasData
+                ? `${Math.round(resources.memoryPercent)}%`
+                : '—'}
             </p>
             <Sparkline
               values={resources.memorySeries}
               height={56}
               color="var(--series-2)"
             />
+            <p className="text-xs text-muted-foreground">
+              {resources.hasData
+                ? `${formatBytes(resources.memoryUsedBytes)} of ${formatBytes(resources.memoryTotalBytes)}`
+                : 'Awaiting the first agent sample'}
+            </p>
           </CardContent>
         </Card>
       </div>

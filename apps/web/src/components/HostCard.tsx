@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/dropdown'
 import { formatBytes, formatRelativeTime, osLabel } from '@/lib/format'
-import { mockHostResources } from '@/lib/mock'
+import { isStale, toHostResources } from '@/lib/metrics'
 import { cn } from '@/lib/utils'
 import type { Host } from '@/types/api'
 
@@ -36,8 +36,12 @@ export function HostCard({
   onRefresh,
 }: HostCardProps) {
   const navigate = useNavigate()
-  // MOCK: the agent does not report host CPU / memory utilisation yet.
-  const resources = mockHostResources(host.id)
+  // Pushed by the agent on `metrics.host` and embedded in the /hosts response,
+  // so the card needs no extra request.
+  const resources = toHostResources(host.metrics)
+  // A disconnected agent leaves its last sample behind; say so rather than
+  // presenting a frozen number as current.
+  const stale = resources.hasData && isStale(resources.collectedAt)
 
   return (
     <Card
@@ -137,25 +141,43 @@ export function HostCard({
             <Cpu className="h-3.5 w-3.5" aria-hidden />
             Resources
           </span>
-          <MockBadge title="Host CPU / memory need a host.metrics agent message — not implemented" />
+          <span
+            className={cn(
+              'text-[11px]',
+              stale ? 'text-warning' : 'text-muted-foreground',
+            )}
+          >
+            {resources.hasData
+              ? `${stale ? 'Stale · ' : ''}${formatRelativeTime(resources.collectedAt)}`
+              : 'Awaiting agent'}
+          </span>
         </div>
-        <Meter
-          label={`CPU · ${resources.cpuCores} cores`}
-          value={resources.cpuPercent}
-        />
-        <div className="space-y-1.5">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MemoryStick className="h-3.5 w-3.5" aria-hidden />
-              Memory
-            </span>
-            <span className="text-xs tabular-nums text-muted-foreground">
-              {formatBytes(resources.memoryUsedBytes)} /{' '}
-              {formatBytes(resources.memoryTotalBytes)}
-            </span>
+        {resources.hasData ? (
+          <div className={cn('space-y-3', stale && 'opacity-60')}>
+            <Meter
+              label={`CPU · ${resources.cpuCores} cores`}
+              value={resources.cpuPercent}
+            />
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <MemoryStick className="h-3.5 w-3.5" aria-hidden />
+                  Memory
+                </span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {formatBytes(resources.memoryUsedBytes)} /{' '}
+                  {formatBytes(resources.memoryTotalBytes)}
+                </span>
+              </div>
+              <Meter value={resources.memoryPercent} />
+            </div>
           </div>
-          <Meter value={resources.memoryPercent} />
-        </div>
+        ) : (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            No sample yet. The agent pushes host CPU and memory every 10 seconds
+            while it is connected.
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-2 border-t border-border px-5 py-3">

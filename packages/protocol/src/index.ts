@@ -88,5 +88,16 @@ export {
   LOGS_UNSUBSCRIBE,
 } from './logs'
 
+export type {
+  HostCpuMetrics,
+  HostMemoryMetrics,
+  HostMetricsMessage,
+  HostMetricsPayload,
+  MetricsMessage,
+  MetricsMessageType,
+} from './metrics'
+
+export { METRICS_HOST, METRICS_MESSAGE_TYPE } from './metrics'
+
 export type { ProtocolErrorCode } from './errors'
 export { ERROR_DOMAIN, PROTOCOL_ERROR_CODE } from './errors'

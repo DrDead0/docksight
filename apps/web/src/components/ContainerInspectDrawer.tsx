@@ -10,7 +10,6 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { StatusBadge } from '@/components/StatusBadge'
-import { MockBadge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CopyButton } from '@/components/ui/copy-button'
 import { DataList, MiniTable } from '@/components/ui/data-list'
@@ -372,7 +371,7 @@ function EnvironmentSection({ env}: { env: string[] }) {
             <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground">
               {hideValue(entry.split('=')[0]) && !revealed ? '••••••••••••' : entry.split('=')[1]}
             </span>
-            <CopyButton value={`${entry.split('=')[1]}=${entry.split('=')[1]}`} label="Copy" />
+            <CopyButton value={`${entry.split('=')[0]}=${entry.split('=')[1]}`} label="Copy" />
           </div>
         ))}
       </div>

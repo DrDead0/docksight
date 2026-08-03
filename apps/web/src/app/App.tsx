@@ -77,9 +77,15 @@ function AuthGate({ children }: { children: ReactNode }) {
   if (status === 'loading') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background">
-        <span className="flex h-12 w-12 animate-pulse items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <Container className="h-6 w-6" aria-hidden />
-        </span>
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+            <img
+              src="/docksight.png"
+              alt="DockSight"
+              width={72}
+              height={72}
+              className="h-48 w-48"
+            />
+            </div>
         <p className="text-sm text-muted-foreground">Starting DockSight…</p>
       </div>
     )

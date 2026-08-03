@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-} from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { HostsService } from './hosts.service';
 
@@ -17,6 +12,17 @@ export class HostsController {
   @ApiOkResponse({ description: 'Registered hosts' })
   listHosts() {
     return this.hostsService.listHosts();
+  }
+
+  @Get(':id/metrics')
+  @ApiOperation({ summary: 'Latest CPU and memory usage reported by a host' })
+  @ApiOkResponse({ description: 'Host resource usage snapshot' })
+  async getMetrics(@Param('id') id: string) {
+    const result = await this.hostsService.getMetrics(id);
+    if (!result) {
+      throw new NotFoundException(`Host not found: ${id}`);
+    }
+    return result;
   }
 
   @Get(':id/containers')

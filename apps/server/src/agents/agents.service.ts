@@ -12,7 +12,9 @@ export class AgentsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async register(payload: AgentRegisterPayload): Promise<AgentRegisteredPayload> {
+  async register(
+    payload: AgentRegisterPayload,
+  ): Promise<AgentRegisteredPayload> {
     const now = new Date();
 
     const agent = await this.prisma.agent.upsert({

@@ -12,9 +12,10 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { CardGridSkeleton } from '@/components/ui/skeleton'
 import { EmptyHosts, ErrorNotice } from '@/features/dashboard/DashboardPage'
 import { useContainers } from '@/hooks/useContainers'
+import { useHostMetrics, HOST_METRICS_POLL_MS } from '@/hooks/useHostMetrics'
 import { useHosts } from '@/hooks/useHosts'
 import { formatBytes } from '@/lib/format'
-import { mockContainerMetrics, mockHostResources } from '@/lib/mock'
+import { mockContainerMetrics } from '@/lib/mock'
 import { cn } from '@/lib/utils'
 
 export function MetricsPage() {
@@ -43,7 +44,7 @@ export function MetricsPage() {
     containers[0] ??
     null
 
-  const resources = hostId ? mockHostResources(hostId) : null
+  const { resources } = useHostMetrics(hostId)
 
   return (
     <PageContainer>
@@ -60,10 +61,10 @@ export function MetricsPage() {
       <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-warning/40 bg-warning/5 px-4 py-2.5 text-sm text-warning">
         <MockBadge label="Mock" />
         <span>
-          The whole metrics surface is placeholder data. The agent protocol has
-          no <code className="font-mono">host.metrics</code> or{' '}
-          <code className="font-mono">container.stats</code> message yet — host
-          identity and the container list below are real.
+          Host CPU and memory are live over{' '}
+          <code className="font-mono">metrics.host</code>. Per-container charts
+          are still placeholder data — the agent protocol has no{' '}
+          <code className="font-mono">container.stats</code> message yet.
         </span>
       </div>
 
@@ -75,39 +76,51 @@ export function MetricsPage() {
         <EmptyHosts />
       ) : (
         <div className="space-y-6">
-          {resources ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatTile
-                label="Host CPU"
-                value={`${Math.round(resources.cpuPercent)}%`}
-                hint={`${resources.cpuCores} cores`}
-                icon={Cpu}
-                chart={<Sparkline values={resources.cpuSeries} />}
-              />
-              <StatTile
-                label="Host memory"
-                value={`${Math.round(resources.memoryPercent)}%`}
-                hint={`${formatBytes(resources.memoryUsedBytes)} of ${formatBytes(resources.memoryTotalBytes)}`}
-                icon={MemoryStick}
-                chart={
-                  <Sparkline
-                    values={resources.memorySeries}
-                    color="var(--series-2)"
-                  />
-                }
-              />
-              <StatTile
-                label="Containers"
-                value={containers.length}
-                hint={`${containers.filter((entry) => entry.state === 'running').length} running`}
-              />
-              <StatTile
-                label="Sampling"
-                value="5s"
-                hint="Placeholder interval"
-              />
-            </div>
-          ) : null}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatTile
+              label="Host CPU"
+              value={
+                resources.hasData ? `${Math.round(resources.cpuPercent)}%` : '—'
+              }
+              hint={
+                resources.hasData
+                  ? `${resources.cpuCores} cores`
+                  : 'Awaiting agent sample'
+              }
+              icon={Cpu}
+              chart={<Sparkline values={resources.cpuSeries} />}
+            />
+            <StatTile
+              label="Host memory"
+              value={
+                resources.hasData
+                  ? `${Math.round(resources.memoryPercent)}%`
+                  : '—'
+              }
+              hint={
+                resources.hasData
+                  ? `${formatBytes(resources.memoryUsedBytes)} of ${formatBytes(resources.memoryTotalBytes)}`
+                  : 'Awaiting agent sample'
+              }
+              icon={MemoryStick}
+              chart={
+                <Sparkline
+                  values={resources.memorySeries}
+                  color="var(--series-2)"
+                />
+              }
+            />
+            <StatTile
+              label="Containers"
+              value={containers.length}
+              hint={`${containers.filter((entry) => entry.state === 'running').length} running`}
+            />
+            <StatTile
+              label="Sampling"
+              value={`${HOST_METRICS_POLL_MS / 1000}s`}
+              hint="Agent push interval"
+            />
+          </div>
 
           {containers.length === 0 ? (
             <EmptyState

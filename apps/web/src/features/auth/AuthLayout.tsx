@@ -20,7 +20,7 @@ export function AuthLayout({
         <div className="w-full max-w-md">
           <div className="mb-8 flex flex-col items-center gap-3 text-center">
             <img
-              src="/dicksight.png"
+              src="/docksight.png"
               alt="DockSight"
               width={72}
               height={72}

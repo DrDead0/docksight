@@ -1,5 +1,32 @@
 export type HostStatus = 'ONLINE' | 'OFFLINE' | 'UNKNOWN' | string
 
+export type HostCpuMetrics = {
+  /** 0-100, averaged across all logical cores over the sample window. */
+  usagePercent: number
+  cores: number
+  /** 1/5/15-minute load average; null on platforms without it. */
+  loadAvg: [number, number, number] | null
+}
+
+export type HostMemoryMetrics = {
+  totalBytes: number
+  usedBytes: number
+  availableBytes: number
+  /** 0-100. */
+  usagePercent: number
+}
+
+/**
+ * `GET /hosts/:id/metrics`, and embedded in each `GET /hosts` row.
+ * `cpu`/`memory` are null until the agent pushes its first `metrics.host`.
+ */
+export type HostMetricsResponse = {
+  hostId: string
+  cpu: HostCpuMetrics | null
+  memory: HostMemoryMetrics | null
+  collectedAt: string | null
+}
+
 export type Host = {
   id: string
   uuid: string
@@ -9,6 +36,7 @@ export type Host = {
   version: string
   status: HostStatus
   lastSeen: string | null
+  metrics: HostMetricsResponse
 }
 
 export type Container = {
