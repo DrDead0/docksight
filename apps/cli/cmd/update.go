@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/installer"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/release"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/config"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/installer"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/release"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/ui"
 
 	"github.com/spf13/cobra"
 )

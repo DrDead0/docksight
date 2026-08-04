@@ -12,10 +12,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/progress"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/release"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/system"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/systemd"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/progress"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/release"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/system"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/systemd"
 )
 
 // UnitController is the systemd surface the installer needs. Depending on an

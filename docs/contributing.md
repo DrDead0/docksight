@@ -8,7 +8,7 @@ Contributions are welcome. This page covers the workflow; see
 ## Getting started
 
 ```bash
-git clone https://github.com/rodriguecyber/docksight.git
+git clone https://github.com/Open-Source-Kigali/docksight.git
 cd docksight
 npm install
 

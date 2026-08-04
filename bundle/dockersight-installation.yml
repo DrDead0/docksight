@@ -51,7 +51,7 @@ services:
       start_period: 5s
 
   server:
-    image:  ghcr.io/rodriguecyber/docksight-server:1.1
+    image:  ghcr.io/Open-Source-Kigali/docksight-server:1.1
     container_name: docksight-server
     labels:
       com.docksight.internal: "true"
@@ -78,7 +78,7 @@ services:
         condition: service_healthy
 
   web:
-    image:  ghcr.io/rodriguecyber/docksight-web:1.1
+    image:  ghcr.io/Open-Source-Kigali/docksight-web:1.1
     container_name: docksight-web
     labels:
       com.docksight.internal: "true"

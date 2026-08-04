@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/ui"
 )
 
 // consoleReporter renders installer progress. It is the only bridge between

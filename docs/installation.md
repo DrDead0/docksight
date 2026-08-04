@@ -47,7 +47,7 @@ missing it stops at validation, leaving the host untouched.
 ### 1. Download the CLI
 
 ```bash
-curl -fLO https://github.com/rodriguecyber/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
+curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
 chmod +x docksight-cli-v0.0.13-linux-amd64
 ```
 
@@ -147,7 +147,7 @@ Run this on **each Docker host** you want to manage.
 ### 1. Download the CLI
 
 ```bash
-curl -fLO https://github.com/rodriguecyber/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
+curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
 chmod +x docksight-cli-v0.0.13-linux-amd64
 ```
 

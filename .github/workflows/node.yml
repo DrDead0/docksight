@@ -2,7 +2,7 @@ name: Server & Web
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
     paths:
       - 'apps/server/**'
       - 'apps/web/**'

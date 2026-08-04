@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/config"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/ui"
 )
 
 // showConfig prints the resolved installation layout. Rendering lives in the

@@ -3,10 +3,10 @@ site_description: >-
   Open-source Docker management and observability platform. Manage many remote
   Docker hosts from one dashboard, with agents that never expose an inbound port.
 site_author: DockSight contributors
-site_url: https://rodriguecyber.github.io/docksight/
+site_url: https://Open-Source-Kigali.github.io/docksight/
 
-repo_name: rodriguecyber/docksight
-repo_url: https://github.com/rodriguecyber/docksight
+repo_name: Open-Source-Kigali/docksight
+repo_url: https://github.com/Open-Source-Kigali/docksight
 edit_uri: edit/main/docs/
 
 copyright: Copyright &copy; DockSight contributors
@@ -126,7 +126,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/rodriguecyber/docksight
+      link: https://github.com/Open-Source-Kigali/docksight
       name: DockSight on GitHub
 
   generator: false

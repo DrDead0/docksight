@@ -3,7 +3,7 @@ package cmd
 import (
 
 	"github.com/spf13/cobra"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/ui"
 )
 
 const status = "all active"

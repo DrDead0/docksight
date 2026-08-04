@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/progress"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/release"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/progress"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/release"
 )
 
 // fakeUnits stands in for systemd.
@@ -103,7 +103,7 @@ func requestedPath(t *testing.T, path string) bool {
 	for _, requested := range requestedPaths {
 
 		// Recorded paths carry the repo prefix, e.g.
-		// /repos/rodriguecyber/docksight/releases/latest
+		// /repos/Open-Source-Kigali/docksight/releases/latest
 		if strings.HasSuffix(requested, path) {
 			return true
 		}

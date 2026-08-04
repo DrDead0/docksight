@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/compose"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/compose"
 )
 
 // Stack is the container runtime the installer drives. It is an interface so

@@ -13,14 +13,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/buildinfo"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/compose"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/env"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/filesystem"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/release"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/selfinstall"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/state"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/config"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/buildinfo"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/compose"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/env"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/filesystem"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/release"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/selfinstall"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/state"
 )
 
 // Timeouts. Starting the stack is dominated by image pulls on a first

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/rodriguecyber/docksight/apps/cli/cmd"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd"
 )
 
 func main() {

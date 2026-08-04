@@ -43,7 +43,7 @@ Every dotted line is initiated **by the agent**. Hosts behind NAT, in another cl
 === "Platform (central server)"
 
     ```bash
-    curl -fLO https://github.com/rodriguecyber/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
+    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
     chmod +x docksight-cli-v0.0.13-linux-amd64
     sudo ./docksight-cli-v0.0.13-linux-amd64 install
     ```
@@ -55,7 +55,7 @@ Every dotted line is initiated **by the agent**. Hosts behind NAT, in another cl
 === "Agent (each Docker host)"
 
     ```bash
-    curl -fLO https://github.com/rodriguecyber/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
+    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
     chmod +x docksight-cli-v0.0.13-linux-amd64
     sudo ./docksight-cli-v0.0.13-linux-amd64 agent install --url https://platform.example.com
     ```

@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/filesystem"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/release"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/selfinstall"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/filesystem"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/release"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/selfinstall"
 )
 
 // downloadBinary fetches the agent build for target from the given release

@@ -55,8 +55,8 @@ dialling nginx. Nothing ever connects *to* a Docker host.
 | Service | Image | Role |
 | --- | --- | --- |
 | `nginx` | `nginx:1.25-alpine` | The only published port. Routes `/` to the dashboard, `/api` and `/agents` to the backend. |
-| `web` | `ghcr.io/rodriguecyber/docksight-web` | React + TypeScript dashboard. |
-| `server` | `ghcr.io/rodriguecyber/docksight-server` | NestJS modular monolith: REST API, WebSocket gateway, Prisma. |
+| `web` | `ghcr.io/Open-Source-Kigali/docksight-web` | React + TypeScript dashboard. |
+| `server` | `ghcr.io/Open-Source-Kigali/docksight-server` | NestJS modular monolith: REST API, WebSocket gateway, Prisma. |
 | `postgres` | `postgres:17-alpine` | Source of truth: hosts, agents, users, audit. |
 | `redis` | `redis:7-alpine` | Cache and pub/sub for realtime fan-out. |
 
@@ -348,4 +348,4 @@ More detail in [Development](development.md#repository-structure).
 
 - [WebSocket protocol](websocket-protocol.md) — the wire format in depth.
 - [Protocol specification](protocol.md) — field-level reference and source of truth.
-- Architecture decision records: [`docs/decisions/`](https://github.com/rodriguecyber/docksight/tree/main/docs/decisions).
+- Architecture decision records: [`docs/decisions/`](https://github.com/Open-Source-Kigali/docksight/tree/main/docs/decisions).
