@@ -20,7 +20,7 @@ fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${DOCKSIGHT_RELEASE_DIR:-$ROOT/release}"
-REPO="rodriguecyber/docksight"
+REPO="Open-Source-Kigali/docksight"
 
 if ! command -v gh >/dev/null 2>&1; then
 	echo "gh is not installed: https://cli.github.com" >&2

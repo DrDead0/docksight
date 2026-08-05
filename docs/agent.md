@@ -127,7 +127,7 @@ itself on first connection, and preserved by every subsequent install or update.
 ```ini title="/etc/systemd/system/docksight-agent.service"
 [Unit]
 Description=DockSight Agent
-Documentation=https://github.com/rodriguecyber/docksight
+Documentation=https://github.com/Open-Source-Kigali/docksight
 After=docker.service network.target network-online.target
 Wants=network-online.target
 Requires=docker.service

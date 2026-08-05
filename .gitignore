@@ -53,7 +53,7 @@ agent/vendor/
 *.exe
 *.test
 *.out
-
+*.tar.gz
 # Release artifacts — built by scripts/build-release.sh and uploaded to the
 # GitHub release. They are outputs, not sources: rebuildable from any tag.
 release/

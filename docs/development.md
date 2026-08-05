@@ -136,7 +136,7 @@ go build -o /tmp/docksight .
 
     ```bash
     cd apps/cli
-    go build -ldflags "-s -w -X github.com/rodriguecyber/docksight/apps/cli/cmd/internal/buildinfo.Version=v0.0.14" -o docksight .
+    go build -ldflags "-s -w -X github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/buildinfo.Version=v0.0.14" -o docksight .
     ```
 
 === "Agent only"

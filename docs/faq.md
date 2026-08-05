@@ -27,14 +27,14 @@ Always download with `-f`, which turns a 404 into an error instead of a saved
 error page:
 
 ```bash
-curl -fLO https://github.com/rodriguecyber/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
+curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
 ```
 
 The usual root cause is that the asset genuinely does not exist on that release
 — check before blaming the network:
 
 ```bash
-curl -s https://api.github.com/repos/rodriguecyber/docksight/releases/latest | grep '"name": "docksight'
+curl -s https://api.github.com/repos/Open-Source-Kigali/docksight/releases/latest | grep '"name": "docksight'
 ```
 
 ### `Permission denied` when running the downloaded binary

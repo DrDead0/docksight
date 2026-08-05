@@ -14,7 +14,7 @@ import (
 // connection attempt against an interface that has no address yet.
 const unitTemplate = `[Unit]
 Description=DockSight Agent
-Documentation=https://github.com/rodriguecyber/docksight
+Documentation=https://github.com/Open-Source-Kigali/docksight
 After=docker.service network.target network-online.target
 Wants=network-online.target
 Requires=docker.service

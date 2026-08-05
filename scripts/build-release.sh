@@ -27,7 +27,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUNDLE="$ROOT/bundle"
 CLI_DIR="$ROOT/apps/cli"
 AGENT_DIR="$ROOT/apps/agent"
-MODULE="github.com/rodriguecyber/docksight/apps/cli"
+MODULE="github.com/Open-Source-Kigali/docksight/apps/cli"
 OUT="${DOCKSIGHT_RELEASE_DIR:-$ROOT/release}"
 
 # Files the installer expects to find in the bundle. Shipping without

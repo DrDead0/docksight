@@ -1,4 +1,4 @@
-module github.com/rodriguecyber/docksight/apps/cli
+module github.com/Open-Source-Kigali/docksight/apps/cli
 
 go 1.26.5
 

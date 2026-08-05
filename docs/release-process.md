@@ -178,7 +178,7 @@ graph LR
 4. **Publish**: `scripts/publish-release.sh v0.0.14`
 5. **Verify** the release is not a draft and lists eight assets:
    ```bash
-   curl -s https://api.github.com/repos/rodriguecyber/docksight/releases/latest \
+   curl -s https://api.github.com/repos/Open-Source-Kigali/docksight/releases/latest \
      | grep '"name": "docksight'
    ```
 6. **Smoke test** on a real host: `sudo docksight update` and

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/agent/install"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/ui"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/agent/install"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/ui"
 
 	"github.com/spf13/cobra"
 )

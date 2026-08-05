@@ -33,7 +33,7 @@ func init() {
 			RunE: func(cmd *cobra.Command, args []string) error {
 
 				return fmt.Errorf(
-					"docksight agent %s is not implemented yet",
+					"docksight agent %s will be ready soon",
 					cmd.Name(),
 				)
 			},

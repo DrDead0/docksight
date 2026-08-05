@@ -9,7 +9,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/progress"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/progress"
 )
 
 // Requirement is one named precondition.

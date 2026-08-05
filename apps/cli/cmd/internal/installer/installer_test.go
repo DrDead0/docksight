@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/config"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/compose"
-	"github.com/rodriguecyber/docksight/apps/cli/cmd/internal/release"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/config"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/compose"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/release"
 )
 
 // fakeStack stands in for docker compose.
