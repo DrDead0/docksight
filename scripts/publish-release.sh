@@ -20,7 +20,9 @@ fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${DOCKSIGHT_RELEASE_DIR:-$ROOT/release}"
-REPO="Open-Source-Kigali/docksight"
+# GITHUB_REPOSITORY is set by GitHub Actions (owner/repo of the run), so the
+# workflow targets the repository it runs in; manually it defaults upstream.
+REPO="${GITHUB_REPOSITORY:-Open-Source-Kigali/docksight}"
 
 if ! command -v gh >/dev/null 2>&1; then
 	echo "gh is not installed: https://cli.github.com" >&2
