@@ -101,8 +101,8 @@ The script:
    to build otherwise
 2. Writes the version into `bundle/VERSION`
 3. Packs `bundle/` into `docksight-platform-v0.0.14.tar.gz`
-4. Cross-compiles the CLI for five targets, stamping the version with
-   `-ldflags -X ...buildinfo.Version=v0.0.14`
+4. Cross-compiles the CLI for five targets, stamping the version, commit, and
+   UTC build date with `-ldflags`
 5. Cross-compiles the agent for `linux/amd64` and `linux/arm64`
 
 Output goes to `release/`, which is git-ignored — these are build outputs,

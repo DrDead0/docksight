@@ -168,6 +168,8 @@ so there is a brief outage. `.env` and named volumes survive.
 ```console
 $ docksight version
 → CLI version: v0.0.13
+→ Commit: a1b2c3d
+→ Build date: 2026-08-07T14:00:00Z
 → Platform version: v0.0.13
 ```
 
@@ -176,11 +178,14 @@ On a host with no platform installed:
 ```console
 $ docksight version
 → CLI version: v0.0.13
+→ Commit: a1b2c3d
+→ Build date: 2026-08-07T14:00:00Z
 → Platform version: not installed
 ```
 
-The CLI version is stamped at build time with `-ldflags`; a locally built binary
-reports `dev`. The platform version comes from `state.json`.
+The CLI version, commit, and UTC build date are stamped at build time with
+`-ldflags`. A plain local build reports `dev` for the version and commit, and
+`unknown` for the build date. The platform version comes from `state.json`.
 
 ---
 
