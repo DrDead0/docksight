@@ -69,7 +69,7 @@ end-to-end on a real host.
       `systemd` package already supports all of them
 - [ ] **`docksight agent uninstall`** — clean removal of binary, config, unit,
       with an explicit choice about identity
-- [ ] **CI release workflow** — a GitHub Actions job on tag push running build
+- [x] **CI release workflow** — a GitHub Actions job on tag push running build
       and publish, removing the manual-upload failure mode
 - [ ] **Optional CLI installation on agent hosts** — so `docksight agent update`
       works without keeping the downloaded binary

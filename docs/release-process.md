@@ -128,6 +128,16 @@ Build elsewhere with `DOCKSIGHT_RELEASE_DIR=/tmp/rel scripts/build-release.sh v0
 
 ## Publishing a release
 
+Pushing a tag runs `.github/workflows/release.yml`: it builds all eight
+artifacts, uploads them, and verifies the release carries every one — no manual
+steps.
+
+```bash
+git tag v0.0.14 && git push origin v0.0.14
+```
+
+The same upload and verification can still be run by hand:
+
 ```bash
 scripts/publish-release.sh v0.0.14
 ```
@@ -165,23 +175,23 @@ gh release upload v0.0.14 release/docksight-agent-v0.0.14-linux-amd64
 
 ```mermaid
 graph LR
-    A[1. Merge to main] --> B[2. Tag]
-    B --> C[3. build-release.sh]
-    C --> D[4. publish-release.sh]
-    D --> E[5. Verify assets]
-    E --> F[6. Upgrade a test host]
+    A[1. Merge to main] --> B[2. Push tag]
+    B --> C[3. CI builds and uploads]
+    C --> D[4. CI verifies assets]
+    D --> E[5. Upgrade a test host]
 ```
 
 1. **Merge** everything intended for the release
 2. **Tag**: `git tag v0.0.14 && git push origin v0.0.14`
-3. **Build**: `scripts/build-release.sh v0.0.14`
-4. **Publish**: `scripts/publish-release.sh v0.0.14`
-5. **Verify** the release is not a draft and lists eight assets:
+3. **Build & publish** happen automatically: the tag-push workflow runs
+   `build-release.sh`, uploads `release/*` to the release, and fails the run if
+   any of the eight assets is missing
+4. **Verify** the release is not a draft and lists eight assets:
    ```bash
    curl -s https://api.github.com/repos/Open-Source-Kigali/docksight/releases/latest \
      | grep '"name": "docksight'
    ```
-6. **Smoke test** on a real host: `sudo docksight update` and
+5. **Smoke test** on a real host: `sudo docksight update` and
    `sudo docksight agent update`
 
 ---
@@ -216,10 +226,10 @@ remove that alias without checking which releases users may still pin to.
 
 ## Automation
 
-There is no CI release workflow yet — releases are cut from a developer machine
-with the two scripts. A GitHub Actions workflow triggered on tag push, running
-both scripts, is on the [Roadmap](roadmap.md#in-progress) and would eliminate
-the manual-upload failure mode entirely.
+A GitHub Actions workflow (`.github/workflows/release.yml`) triggers on tag
+push: it runs `build-release.sh` and `publish-release.sh`, so the eight
+artifacts are built, uploaded, and verified with zero manual steps. A missing
+artifact fails the workflow instead of publishing an incomplete release.
 
 ---
 
