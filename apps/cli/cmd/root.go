@@ -3,13 +3,15 @@ package cmd
 import (
 	"os"
 
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/buildinfo"
 	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/ui"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "docksight",
-	Short: "DockSight CLI - Container monitoring platform installer",
+	Use:     "docksight",
+	Short:   "DockSight CLI - Container monitoring platform installer",
+	Version: buildinfo.Version,
 
 	// A failing install is a runtime error, not a usage mistake: printing the
 	// flag reference after it buries the actual cause. Errors are reported
