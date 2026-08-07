@@ -14,6 +14,7 @@ import {
   VolumesPage,
 } from '@/features/inventory/InventoryPages'
 import { MetricsPage } from '@/features/metrics/MetricsPage'
+import { NotFoundPage } from '@/features/not-found/NotFoundPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { useAuthStore } from '@/stores/auth'
 
@@ -56,7 +57,7 @@ function AppRoutes() {
       <Route path="/volumes" element={<VolumesPage />} />
       <Route path="/metrics" element={<MetricsPage />} />
       <Route path="/settings" element={<SettingsPage />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }
