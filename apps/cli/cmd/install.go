@@ -37,9 +37,15 @@ var installCMD = &cobra.Command{
 			return err
 		}
 
+		host := system.PrimaryIPv4()
 		ui.Success(
-			fmt.Sprintf("DockSight is running on http://localhost:%d", cfg.Port),
+			fmt.Sprintf("DockSight is running on http://%s:%d", host, cfg.Port),
 		)
+		if host != "localhost" {
+			ui.Info(
+				fmt.Sprintf("Local-only access: http://localhost:%d", cfg.Port),
+			)
+		}
 
 		return nil
 	},
