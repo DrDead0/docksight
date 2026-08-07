@@ -21,9 +21,9 @@ jobs:
           go-version-file: apps/cli/go.mod
 
       - name: Build all artifacts
-        run: scripts/build-release.sh "${GITHUB_REF_NAME}"
+        run: bash scripts/build-release.sh "${GITHUB_REF_NAME}"
 
       - name: Publish and verify release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: scripts/publish-release.sh "${GITHUB_REF_NAME}"
+        run: bash scripts/publish-release.sh "${GITHUB_REF_NAME}"
