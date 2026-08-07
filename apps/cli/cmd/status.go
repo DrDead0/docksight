@@ -10,7 +10,7 @@ const status = "all active"
 
 var statusCMD = &cobra.Command{
 	Use:  "status",
-	Short:"check tha  docker sight web, server, and db status",
+	Short:"check the DockSight web, server, and db status",
     Run: func (cmd *cobra.Command, args []string){
 		ui.Info("Docksight status: "+ status)
 	},
