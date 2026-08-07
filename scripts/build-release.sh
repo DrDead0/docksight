@@ -24,6 +24,8 @@ if [ -z "$VERSION" ]; then
 fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+COMMIT="$(git -C "$ROOT" rev-parse --short HEAD)"
+BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 BUNDLE="$ROOT/bundle"
 CLI_DIR="$ROOT/apps/cli"
 AGENT_DIR="$ROOT/apps/agent"
@@ -77,7 +79,10 @@ for target in $TARGETS; do
 	binary="$OUT/docksight-cli-$VERSION-$os-$arch$ext"
 
 	GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -C "$CLI_DIR" \
-		-ldflags "-s -w -X $MODULE/cmd/internal/buildinfo.Version=$VERSION" \
+		-ldflags "-s -w \
+			-X $MODULE/cmd/internal/buildinfo.Version=$VERSION \
+			-X $MODULE/cmd/internal/buildinfo.Commit=$COMMIT \
+			-X $MODULE/cmd/internal/buildinfo.BuildDate=$BUILD_DATE" \
 		-o "$binary" .
 
 	# Building on a filesystem without a Unix execute bit (NTFS) produces a

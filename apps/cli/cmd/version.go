@@ -16,6 +16,8 @@ var versionCMD = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		ui.Info("CLI version: " + buildinfo.Version)
+		ui.Info("Commit: " + buildinfo.Commit)
+		ui.Info("Build date: " + buildinfo.BuildDate)
 
 		cfg := config.Default()
 

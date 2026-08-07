@@ -136,7 +136,14 @@ go build -o /tmp/docksight .
 
     ```bash
     cd apps/cli
-    go build -ldflags "-s -w -X github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/buildinfo.Version=v0.0.14" -o docksight .
+    MODULE="github.com/Open-Source-Kigali/docksight/apps/cli"
+    COMMIT="$(git rev-parse --short HEAD)"
+    BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    go build -ldflags "-s -w \
+      -X $MODULE/cmd/internal/buildinfo.Version=v0.0.14 \
+      -X $MODULE/cmd/internal/buildinfo.Commit=$COMMIT \
+      -X $MODULE/cmd/internal/buildinfo.BuildDate=$BUILD_DATE" \
+      -o docksight .
     ```
 
 === "Agent only"
