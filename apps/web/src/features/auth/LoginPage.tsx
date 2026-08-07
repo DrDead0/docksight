@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function LoginPage() {
+  useDocumentTitle('Sign in')
+
   const navigate = useNavigate()
   const location = useLocation()
   const status = useAuthStore((state) => state.status)

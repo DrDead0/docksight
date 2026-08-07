@@ -9,6 +9,7 @@ import {
   VolumesTable,
 } from '@/features/inventory/InventoryTables'
 import { useHosts } from '@/hooks/useHosts'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 /** Shared shell: pick a host, render that host's (mock) inventory table. */
 function HostScopedPage({
@@ -20,6 +21,7 @@ function HostScopedPage({
   description: string
   render: (hostId: string) => ReactNode
 }) {
+  useDocumentTitle(title)
   const hostsQuery = useHosts()
   const hosts = useMemo(() => hostsQuery.data ?? [], [hostsQuery.data])
   const [hostId, setHostId] = useState<string | undefined>()

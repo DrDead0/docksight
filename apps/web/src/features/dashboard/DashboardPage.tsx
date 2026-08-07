@@ -23,8 +23,11 @@ import { useIsAdmin } from '@/stores/auth'
 import { toHostResources } from '@/lib/metrics'
 import { ApiError } from '@/services/api'
 import { useState } from 'react'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function DashboardPage() {
+  useDocumentTitle('Dashboard')
+
   const navigate = useNavigate()
   const hostsQuery = useHosts()
   const hosts = hostsQuery.data ?? []

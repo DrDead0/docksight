@@ -17,8 +17,11 @@ import { useHosts } from '@/hooks/useHosts'
 import { formatBytes } from '@/lib/format'
 import { mockContainerMetrics } from '@/lib/mock'
 import { cn } from '@/lib/utils'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function MetricsPage() {
+  useDocumentTitle('Metrics')
+
   const hostsQuery = useHosts()
   const hosts = useMemo(() => hostsQuery.data ?? [], [hostsQuery.data])
   const [hostId, setHostId] = useState<string | undefined>()

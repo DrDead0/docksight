@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 const MIN_PASSWORD_LENGTH = 8
 
@@ -15,6 +16,8 @@ const MIN_PASSWORD_LENGTH = 8
  * exists, so a stale tab cannot create a second admin.
  */
 export function SetupPage() {
+  useDocumentTitle('Setup')
+
   const navigate = useNavigate()
   const status = useAuthStore((state) => state.status)
   const completeSetup = useAuthStore((state) => state.completeSetup)
