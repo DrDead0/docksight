@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	defaultOwner   = "rodriguecyber"
+    defaultOwner   = "Open-Source-Kigali"
 	defaultRepo    = "docksight"
 	defaultBaseURL = "https://api.github.com"
 )

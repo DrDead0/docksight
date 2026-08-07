@@ -46,7 +46,7 @@ func TestLatest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if requested != "/repos/rodriguecyber/docksight/releases/latest" {
+	if requested != "/repos/Open-Source-Kigali/docksight/releases/latest" {
 		t.Fatalf("requested %q", requested)
 	}
 
