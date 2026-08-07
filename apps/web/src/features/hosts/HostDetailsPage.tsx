@@ -55,6 +55,7 @@ import {
   osLabel,
 } from '@/lib/format'
 import type { HostResources } from '@/lib/metrics'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type TabKey =
   | 'overview'
@@ -82,6 +83,7 @@ export function HostDetailsPage() {
 
   const hostsQuery = useHosts()
   const host = hostsQuery.data?.find((entry) => entry.id === hostId)
+  useDocumentTitle(host?.hostname ?? (hostsQuery.isLoading ? 'Host' : 'Host not found'))
   const containersQuery = useContainers(hostId)
   const containers = containersQuery.data?.containers ?? []
   const { resources } = useHostMetrics(hostId)

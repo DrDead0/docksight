@@ -11,8 +11,11 @@ import { useContainerCommands } from '@/hooks/useContainerCommands'
 import { useHostInventory } from '@/hooks/useHostInventory'
 import { useHosts } from '@/hooks/useHosts'
 import { useIsAdmin } from '@/stores/auth'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 export function ContainersPage() {
+  useDocumentTitle('Containers')
+
   const hostsQuery = useHosts()
   const hosts = hostsQuery.data ?? []
   const inventory = useHostInventory(hosts)

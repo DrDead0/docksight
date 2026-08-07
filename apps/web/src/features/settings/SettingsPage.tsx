@@ -9,6 +9,7 @@ import { APP_VERSION } from '@/lib/mock'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { cn } from '@/lib/utils'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 function apiBaseUrl(): string {
   const raw = import.meta.env.VITE_API_URL as string | undefined
@@ -16,6 +17,8 @@ function apiBaseUrl(): string {
 }
 
 export function SettingsPage() {
+  useDocumentTitle('Settings')
+
   const navigate = useNavigate()
   const theme = useThemeStore((state) => state.theme)
   const setTheme = useThemeStore((state) => state.setTheme)

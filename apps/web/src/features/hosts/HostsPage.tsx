@@ -11,10 +11,13 @@ import { FilterChips } from '@/components/ui/tabs'
 import { StatusDot } from '@/components/ui/badge'
 import { useHostInventory } from '@/hooks/useHostInventory'
 import { useHosts } from '@/hooks/useHosts'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type HostFilter = 'all' | 'online' | 'offline'
 
 export function HostsPage() {
+  useDocumentTitle('Hosts')
+
   const hostsQuery = useHosts()
   const hosts = useMemo(() => hostsQuery.data ?? [], [hostsQuery.data])
   const inventory = useHostInventory(hosts)
