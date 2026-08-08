@@ -6,27 +6,41 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
+// Detection runs once. An explicit override (tests / --ascii) is checked first
+// so SetUnicode never races with concurrent UseUnicode readers.
 var (
-	useUnicodeOnce sync.Once
-	useUnicode     bool
+	detectOnce      sync.Once
+	detectedUnicode bool
+	unicodeOverride atomic.Pointer[bool]
 )
 
 // UseUnicode reports whether status symbols should be Unicode. Detection runs
 // once: NO_UNICODE / DOCKSIGHT_ASCII force ASCII; non-TTY stdout, TERM=dumb,
 // and non-UTF-8 Windows consoles also fall back.
 func UseUnicode() bool {
-	useUnicodeOnce.Do(func() {
-		useUnicode = detectUnicode()
+	if p := unicodeOverride.Load(); p != nil {
+		return *p
+	}
+	detectOnce.Do(func() {
+		detectedUnicode = detectUnicode()
 	})
-	return useUnicode
+	return detectedUnicode
 }
 
 // SetUnicode overrides detection. Intended for tests and an explicit --ascii flag.
+// The override is independent of the one-shot detector, so concurrent UseUnicode
+// calls remain race-free.
 func SetUnicode(enabled bool) {
-	useUnicodeOnce.Do(func() {})
-	useUnicode = enabled
+	v := enabled
+	unicodeOverride.Store(&v)
+}
+
+// clearUnicodeOverride restores environment-based detection. Test-only.
+func clearUnicodeOverride() {
+	unicodeOverride.Store(nil)
 }
 
 func detectUnicode() bool {

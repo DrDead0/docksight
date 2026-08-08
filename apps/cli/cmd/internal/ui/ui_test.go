@@ -24,8 +24,14 @@ func captureStdout(t *testing.T, fn func()) string {
 	return buf.String()
 }
 
+func withUnicode(t *testing.T, enabled bool) {
+	t.Helper()
+	SetUnicode(enabled)
+	t.Cleanup(clearUnicodeOverride)
+}
+
 func TestASCIIFallbackSymbols(t *testing.T) {
-	SetUnicode(false)
+	withUnicode(t, false)
 	out := captureStdout(t, func() {
 		Success("ok")
 		Error("bad")
@@ -40,7 +46,7 @@ func TestASCIIFallbackSymbols(t *testing.T) {
 }
 
 func TestUnicodeSymbols(t *testing.T) {
-	SetUnicode(true)
+	withUnicode(t, true)
 	out := captureStdout(t, func() {
 		Success("ok")
 		Error("bad")
