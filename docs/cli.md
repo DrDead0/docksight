@@ -23,7 +23,7 @@ docksight
     ├── restart      Restart the agent service      (placeholder)
     ├── status       Show agent service status      (placeholder)
     ├── logs         Show agent service logs        (placeholder)
-    └── config       Show or edit agent config      (placeholder)
+    └── config       Show or update agent config
 ```
 
 Placeholders exist so the command surface is discoverable, but they fail loudly
@@ -314,6 +314,36 @@ gets introduced, so the update path avoids it.
 
 ---
 
+## `docksight agent config`
+
+With no flags, displays the effective agent configuration without printing the
+contents of `identity.json`:
+
+```console
+$ sudo docksight agent config
+→ Agent configuration:
+→ Platform URL:  wss://platform.example.com/agents
+→ Binary path:   /usr/local/bin/docksight-agent
+→ Config path:   /etc/docksight-agent/config.yaml
+→ Unit name:     docksight-agent.service
+→ Docker socket: /var/run/docker.sock
+→ Registered:    yes
+```
+
+Change only the platform URL with `--set-url`:
+
+```console
+$ sudo docksight agent config --set-url https://other.example.com
+✓ Platform URL updated to wss://other.example.com/agents
+✓ docksight-agent.service restarted
+```
+
+The URL is validated and normalized before `config.yaml` is written. Invalid
+input leaves the file unchanged. Other configuration values are preserved, and
+`identity.json` is never opened or modified.
+
+---
+
 ## Placeholder commands
 
 These are declared but not implemented:
@@ -326,7 +356,6 @@ These are declared but not implemented:
 | `docksight agent restart` | `sudo systemctl restart docksight-agent` |
 | `docksight agent status` | `systemctl status docksight-agent` |
 | `docksight agent logs` | `journalctl -u docksight-agent -f` |
-| `docksight agent config` | `cat /etc/docksight-agent/config.yaml` |
 
 ---
 

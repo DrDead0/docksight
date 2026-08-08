@@ -19,7 +19,6 @@ var agentPlaceholders = []struct {
 	{"restart", "Restart the agent service"},
 	{"status", "Show the agent service status"},
 	{"logs", "Show the agent service logs"},
-	{"config", "Show or edit the agent configuration"},
 }
 
 func init() {
