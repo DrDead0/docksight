@@ -38,7 +38,8 @@ end-to-end on a real host.
 - [x] WebSocket transport with a single message envelope
 - [x] Agent registration and upsert by UUID
 - [x] 30-second heartbeat
-- [x] Automatic reconnection with re-registration
+- [x] Automatic reconnection with re-registration, exponential backoff capped
+      at 30 seconds, and full jitter
 - [x] Container discovery (`container.list` / `listed`)
 - [x] Container inspection (`container.inspect` / `inspected`)
 - [x] Container lifecycle: start, stop, restart, with correlated results
@@ -104,7 +105,6 @@ exists.
 ### Agent
 
 - Automatic self-update on a schedule or platform instruction
-- Exponential backoff with jitter for reconnection, replacing the fixed 5s delay
 - Self-reported health beyond heartbeat
 - Plugin system for custom collectors
 - Resource limits for the agent process
