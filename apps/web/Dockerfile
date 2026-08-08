@@ -24,7 +24,10 @@ COPY packages/utils/package.json packages/utils/
 COPY packages/protocol/tsconfig.json packages/protocol/
 COPY packages/protocol/src packages/protocol/src
 
-# The web app has no native dependencies, so install scripts can be skipped.
+# Vite/rolldown, Tailwind oxide and lightningcss are native addons, but they
+# ship as prebuilt per-platform packages and need no install script. npm picks
+# the right one via the `os`/`cpu` fields — this image is alpine, so it resolves
+# the `-musl` variants pinned in the root package.json optionalDependencies.
 RUN npm ci --ignore-scripts
 
 COPY . .
