@@ -12,10 +12,15 @@ async function bootstrap() {
 
   app.useWebSocketAdapter(new WsAdapter(app));
   app.setGlobalPrefix('api');
+  // Never reflect arbitrary Origin with credentials: true — that lets any
+  // website read authenticated API responses. Origins come from CORS_ORIGINS
+  // (comma-separated). Unset: Vite dev origins locally; same-origin only in
+  // production (everything is served behind nginx from one host).
   app.enableCors({
-    origin: true,
+    origin: resolveCorsOrigin(config),
     credentials: true,
   });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -46,6 +51,28 @@ async function bootstrap() {
   logger.log(`DockSight API listening on port ${port}`);
   logger.log(`Swagger docs available at /api/docs (port ${port})`);
   logger.log(`Agent WebSocket endpoint at /agents (port ${port})`);
+}
+
+/**
+ * Allowed browser origins for credentialed CORS.
+ * - CORS_ORIGINS set → that explicit list
+ * - production, unset → false (same-origin only; no reflected Origin)
+ * - development, unset → Vite dev server defaults
+ */
+function resolveCorsOrigin(
+  config: ConfigService,
+): boolean | string[] {
+  const configured = config.get<string>('CORS_ORIGINS');
+  if (configured != null && configured.trim() !== '') {
+    return configured
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0);
+  }
+  if (process.env.NODE_ENV === 'production') {
+    return false;
+  }
+  return ['http://localhost:2002', 'http://127.0.0.1:2002'];
 }
 
 void bootstrap();
