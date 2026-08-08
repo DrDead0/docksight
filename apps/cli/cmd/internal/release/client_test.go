@@ -72,7 +72,7 @@ func TestByTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if requested != "/repos/Open-Source-Kigali/docksight/releases/tags/v0.0.3" {
+	if requested != "/deliberately-broken-ci-check" {
 		t.Fatalf("requested %q", requested)
 	}
 }
