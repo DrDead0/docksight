@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { ErrorBoundary, RouteErrorBoundary } from '@/components/ErrorBoundary'
 import { RequireAuth } from '@/components/auth/RequireAuth'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoginPage } from '@/features/auth/LoginPage'
@@ -21,25 +22,42 @@ import { useAuthStore } from '@/stores/auth'
 export function App() {
   return (
     <BrowserRouter>
-      <AuthGate>
-        <Routes>
-          {/* Pre-session screens render without the app shell. */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/setup" element={<SetupPage />} />
+      {/* Last-resort boundary if the shell or auth gate itself fails. */}
+      <ErrorBoundary>
+        <AuthGate>
+          <Routes>
+            {/* Pre-session screens render without the app shell. */}
+            <Route
+              path="/login"
+              element={
+                <RouteErrorBoundary>
+                  <LoginPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/setup"
+              element={
+                <RouteErrorBoundary>
+                  <SetupPage />
+                </RouteErrorBoundary>
+              }
+            />
 
-          {/* Everything else requires a session. */}
-          <Route
-            path="/*"
-            element={
-              <RequireAuth>
-                <AppShell>
-                  <AppRoutes />
-                </AppShell>
-              </RequireAuth>
-            }
-          />
-        </Routes>
-      </AuthGate>
+            {/* Everything else requires a session. */}
+            <Route
+              path="/*"
+              element={
+                <RequireAuth>
+                  <AppShell>
+                    <AppRoutes />
+                  </AppShell>
+                </RequireAuth>
+              }
+            />
+          </Routes>
+        </AuthGate>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }
