@@ -8,17 +8,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:     "docksight",
-	Short:   "DockSight CLI - Container monitoring platform installer",
-	Version: buildinfo.Version,
+var (
+	asciiOutput bool
 
-	// A failing install is a runtime error, not a usage mistake: printing the
-	// flag reference after it buries the actual cause. Errors are reported
-	// once, by Execute.
-	SilenceUsage:  true,
-	SilenceErrors: true,
-}
+	rootCmd = &cobra.Command{
+		Use:     "docksight",
+		Short:   "DockSight CLI - Container monitoring platform installer",
+		Version: buildinfo.Version,
+
+		// A failing install is a runtime error, not a usage mistake: printing the
+		// flag reference after it buries the actual cause. Errors are reported
+		// once, by Execute.
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if asciiOutput {
+				ui.SetUnicode(false)
+			}
+		},
+	}
+)
 
 func Execute() {
 
@@ -32,4 +41,8 @@ func Execute() {
 		ui.Error(err.Error())
 		os.Exit(1)
 	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolVar(&asciiOutput, "ascii", false, "use ASCII status symbols instead of Unicode")
 }

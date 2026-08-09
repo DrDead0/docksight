@@ -56,7 +56,7 @@ func Load(path string) (*Config, error) {
 
 	cfg.applyDefaults()
 	if err := cfg.validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validate config %q: %w", path, err)
 	}
 
 	return cfg, nil
@@ -67,9 +67,6 @@ func defaultConfig() *Config {
 		Agent: AgentConfig{
 			DataDir:      "./data",
 			IdentityFile: "./data/identity.json",
-		},
-		Server: ServerConfig{
-			URL: "ws://localhost:3000/agents",
 		},
 		Docker: DockerConfig{
 			Socket: defaultDockerSocket(),
@@ -90,11 +87,7 @@ func (c *Config) applyDefaults() {
 		c.Agent.IdentityFile = filepath.Join(c.Agent.DataDir, "identity.json")
 	}
 	if c.Server.URL == "" {
-		if envURL := os.Getenv("AGENT_SERVER_URL"); envURL != "" {
-			c.Server.URL = envURL
-		} else {
-			c.Server.URL = defaults.Server.URL
-		}
+		c.Server.URL = os.Getenv("AGENT_SERVER_URL")
 	}
 	if c.Docker.Socket == "" {
 		c.Docker.Socket = defaults.Docker.Socket
@@ -109,7 +102,7 @@ func (c *Config) validate() error {
 		return fmt.Errorf("agent.identity_file is required")
 	}
 	if c.Server.URL == "" {
-		return fmt.Errorf("server.url is required")
+		return fmt.Errorf("server.url is required when AGENT_SERVER_URL is not set")
 	}
 	if c.Docker.Socket == "" {
 		return fmt.Errorf("docker.socket is required")

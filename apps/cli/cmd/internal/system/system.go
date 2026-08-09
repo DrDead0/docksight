@@ -41,6 +41,41 @@ func Validate(ctx context.Context, reporter progress.Reporter, requirements []Re
 	return nil
 }
 
+// ValidateAll runs every requirement and reports each result. Unlike
+// Validate, it does not stop at the first failure — useful for diagnostic
+// commands that should surface every problem at once.
+//
+// The returned error is non-nil when any check failed. Individual failures
+// are reported via reporter.Warn so the caller can still print a summary.
+func ValidateAll(ctx context.Context, reporter progress.Reporter, requirements []Requirement) error {
+
+	if reporter == nil {
+		reporter = progress.Discard{}
+	}
+
+	total := len(requirements)
+	failed := 0
+
+	for index, requirement := range requirements {
+
+		reporter.Step(fmt.Sprintf("[%d/%d] %s", index+1, total, requirement.Name))
+
+		if err := requirement.Check(ctx); err != nil {
+			failed++
+			reporter.Warn(fmt.Sprintf("%s — %v", requirement.Name, err))
+			continue
+		}
+
+		reporter.Success(requirement.Name)
+	}
+
+	if failed == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("%d check(s) failed", failed)
+}
+
 // PlatformRequirements is what `docksight install` needs: a supported host
 // with a working Docker Engine and Compose.
 func PlatformRequirements() []Requirement {

@@ -1,4 +1,4 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -11,11 +11,12 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   app.useWebSocketAdapter(new WsAdapter(app));
-  app.setGlobalPrefix('api');
-  // Never reflect arbitrary Origin with credentials: true — that lets any
-  // website read authenticated API responses. Origins come from CORS_ORIGINS
-  // (comma-separated). Unset: Vite dev origins locally; same-origin only in
-  // production (everything is served behind nginx from one host).
+
+  // Keep /health outside the api prefix so compose probes and operators hit a
+  // stable, unauthenticated path regardless of API versioning.
+  app.setGlobalPrefix('api', {
+    exclude: [{ path: 'health', method: RequestMethod.GET }],
+  });
   app.enableCors({
     origin: resolveCorsOrigin(config),
     credentials: true,

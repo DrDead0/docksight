@@ -108,8 +108,12 @@ for target in $AGENT_TARGETS; do
 
 	binary="$OUT/docksight-agent-$VERSION-$os-$arch"
 
+	# Agent is its own module (docksight-agent), not the CLI module path.
 	GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -C "$AGENT_DIR" \
-		-ldflags "-s -w" \
+		-ldflags "-s -w \
+			-X docksight-agent/internal/version.Version=$VERSION \
+			-X docksight-agent/internal/version.Commit=$COMMIT \
+			-X docksight-agent/internal/version.BuildDate=$BUILD_DATE" \
 		-o "$binary" ./cmd/agent
 
 	chmod +x "$binary" 2>/dev/null || true

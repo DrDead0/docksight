@@ -10,6 +10,7 @@ import { databaseConfig } from './common/database/database.config';
 import { PrismaModule } from './common/database/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { ContainersModule } from './containers/containers.module';
+import { HealthModule } from './health/health.module';
 import { HostsModule } from './hosts/hosts.module';
 import { SetupModule } from './setup/setup.module';
 import { UsersModule } from './users/users.module';
@@ -31,6 +32,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     SetupModule,
+    HealthModule,
   ],
   providers: [
     // Authentication is global and fail-closed: every HTTP route requires a

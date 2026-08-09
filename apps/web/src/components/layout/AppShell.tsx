@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
+import { RouteErrorBoundary } from '@/components/ErrorBoundary'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { cn } from '@/lib/utils'
@@ -20,7 +21,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onOpenNav={() => setMobileNavOpen(true)} />
-        <main className="flex-1">{children}</main>
+        {/* Page-level boundary: sidebar and topbar stay usable after a render error. */}
+        <main className="flex-1">
+          <RouteErrorBoundary>{children}</RouteErrorBoundary>
+        </main>
       </div>
     </div>
   )

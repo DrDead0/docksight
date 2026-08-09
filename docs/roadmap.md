@@ -38,7 +38,8 @@ end-to-end on a real host.
 - [x] WebSocket transport with a single message envelope
 - [x] Agent registration and upsert by UUID
 - [x] 30-second heartbeat
-- [x] Automatic reconnection with re-registration
+- [x] Automatic reconnection with re-registration, exponential backoff capped
+      at 30 seconds, and full jitter
 - [x] Container discovery (`container.list` / `listed`)
 - [x] Container inspection (`container.inspect` / `inspected`)
 - [x] Container lifecycle: start, stop, restart, with correlated results
@@ -57,6 +58,14 @@ end-to-end on a real host.
 - [x] Atomic writes for binaries, `.env` and state files
 - [x] Restrictive file modes for credentials
 - [x] Real host validation that fails before touching the host
+
+### Monitoring
+
+- [x] Host metrics collection on the agent (CPU percent, core count, load
+      average; memory total/used/available) via
+      `apps/agent/internal/metrics/collector.go`
+- [x] Protocol message `metrics.host` (`packages/protocol`) with Linux and
+      Windows fixtures — agent pushes host samples on a fixed interval
 
 ---
 
@@ -80,14 +89,11 @@ end-to-end on a real host.
 
 ### Monitoring
 
-Metrics collection is scaffolded on the platform side and reserved in the
-protocol (`metrics.subscribe`, `metrics.sample`), but no agent implementation
-exists.
+Host CPU and memory are shipped (see **Completed → Monitoring**). What remains:
 
-- CPU usage — host and per container
-- Memory usage and limits
-- Disk usage and I/O
-- Network throughput per container
+- Per-container CPU and memory ([#24](https://github.com/Open-Source-Kigali/docksight/issues/24))
+- Host disk usage and I/O (not collected today)
+- Host and per-container network throughput
 - Historical retention and time-series storage
 - Alert thresholds
 
@@ -104,7 +110,6 @@ exists.
 ### Agent
 
 - Automatic self-update on a schedule or platform instruction
-- Exponential backoff with jitter for reconnection, replacing the fixed 5s delay
 - Self-reported health beyond heartbeat
 - Plugin system for custom collectors
 - Resource limits for the agent process

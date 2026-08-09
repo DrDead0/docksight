@@ -39,6 +39,7 @@ func (a *App) Run() error {
 
 	logger.Setup(cfg.Logging.Level, os.Stdout)
 	logger.Info("configuration loaded", "path", a.configPath, "server", cfg.Server.URL)
+	warnIfPlaintextServerURL(cfg.Server.URL)
 	logger.Printf("DockSight Agent started\n")
 
 	id, created, err := identity.LoadOrCreate(cfg.Agent.IdentityFile)
