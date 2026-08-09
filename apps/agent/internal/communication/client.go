@@ -145,7 +145,7 @@ type Client struct {
 	metrics        *metrics.Collector
 	heartbeatEvery time.Duration
 	metricsEvery   time.Duration
-	reconnectWait  time.Duration
+	reconnect      *reconnectBackoff
 	writeMu        sync.Mutex
 	connMu         sync.RWMutex
 	conn           *websocket.Conn
@@ -166,7 +166,7 @@ func NewClient(
 		metrics:        metrics.NewCollector(),
 		heartbeatEvery: 30 * time.Second,
 		metricsEvery:   10 * time.Second,
-		reconnectWait:  5 * time.Second,
+		reconnect:      newReconnectBackoff(fullJitter),
 	}
 	if logsService != nil {
 		logsService.SetEmitter(c)
@@ -220,13 +220,14 @@ func (c *Client) Run(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			logger.Warn("agent session ended; reconnecting", "error", err.Error(), "retryIn", c.reconnectWait.String())
-		}
+			retryIn := c.reconnect.next()
+			logger.Warn("agent session ended; reconnecting", "error", err.Error(), "retryIn", retryIn.String())
 
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(c.reconnectWait):
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(retryIn):
+			}
 		}
 	}
 }
@@ -261,6 +262,7 @@ func (c *Client) session(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	c.reconnect.reset()
 	logger.Info("registration acknowledged",
 		"id", registered.ID,
 		"uuid", registered.UUID,
