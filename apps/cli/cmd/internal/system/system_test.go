@@ -77,6 +77,58 @@ func TestValidateWithoutReporter(t *testing.T) {
 	}
 }
 
+// ValidateAll is the diagnostic counterpart to Validate: it must run every
+// check even after one fails, so `docksight doctor` can list all problems.
+func TestValidateAllContinuesPastFailures(t *testing.T) {
+
+	ran := 0
+
+	requirements := []Requirement{
+		{Name: "first", Check: func(context.Context) error {
+			ran++
+			return errors.New("first failed")
+		}},
+		{Name: "second", Check: func(context.Context) error {
+			ran++
+			return nil
+		}},
+		{Name: "third", Check: func(context.Context) error {
+			ran++
+			return errors.New("third failed")
+		}},
+	}
+
+	record := &reporter{}
+	err := ValidateAll(context.Background(), record, requirements)
+
+	if err == nil {
+		t.Fatal("expected a non-nil error when checks fail")
+	}
+
+	if ran != 3 {
+		t.Fatalf("%d requirements ran, want 3", ran)
+	}
+
+	if !strings.Contains(err.Error(), "2 check(s) failed") {
+		t.Fatalf("error summary wrong: %v", err)
+	}
+
+	if len(record.steps) != 3 {
+		t.Fatalf("steps not numbered for every check: %v", record.steps)
+	}
+}
+
+func TestValidateAllSucceedsWhenAllPass(t *testing.T) {
+
+	requirements := []Requirement{
+		{Name: "ok", Check: func(context.Context) error { return nil }},
+	}
+
+	if err := ValidateAll(context.Background(), &reporter{}, requirements); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRequirementSets(t *testing.T) {
 
 	if len(PlatformRequirements()) == 0 {
