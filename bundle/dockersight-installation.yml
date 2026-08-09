@@ -76,6 +76,21 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Process up is not enough: the API must reach Postgres. Node is already in
+    # the image (no curl/wget). start_period covers migrate + cold Nest boot.
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
 
   web:
     image:  ghcr.io/Open-Source-Kigali/docksight-web:1.1

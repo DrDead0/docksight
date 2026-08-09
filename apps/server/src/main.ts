@@ -1,4 +1,4 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -11,7 +11,11 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   app.useWebSocketAdapter(new WsAdapter(app));
-  app.setGlobalPrefix('api');
+  // Keep /health outside the api prefix so compose probes and operators hit a
+  // stable, unauthenticated path regardless of API versioning.
+  app.setGlobalPrefix('api', {
+    exclude: [{ path: 'health', method: RequestMethod.GET }],
+  });
   app.enableCors({
     origin: true,
     credentials: true,
