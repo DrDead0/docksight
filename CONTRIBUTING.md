@@ -18,6 +18,50 @@ Thanks for your interest in DockSight.
 5. Create a branch for your change.
 6. Open a pull request with a clear summary and test notes.
 
+### Pull request target
+
+Open PRs against **`develop`**, not `main`. `main` tracks releases;
+day-to-day work lands on `develop` first.
+
+## Go modules (CLI and agent)
+
+The repo has **two separate Go modules**. You must `cd` into the module
+before running `go` commands — there is no root Go workspace.
+
+| Module | Path | `go` version |
+|--------|------|--------------|
+| CLI | `apps/cli` | see `apps/cli/go.mod` (currently 1.26.5) |
+| Agent | `apps/agent` | see `apps/agent/go.mod` (currently 1.25.0) |
+
+### Install Go
+
+Install a Go toolchain that satisfies the module you are changing (the
+`go` directive in that module's `go.mod`). https://go.dev/dl/
+
+### Build and test
+
+```bash
+# CLI
+cd apps/cli
+go build -o docksight .
+go test ./...
+
+# Agent
+cd apps/agent
+go build -o docksight-agent .
+go test ./...
+```
+
+More CLI layout notes (including the `internal/` ↔ `ui` rule) live in
+[`apps/cli/README.md`](apps/cli/README.md). User-facing command docs:
+[`docs/cli.md`](docs/cli.md).
+
+### Platform limits
+
+CLI features that drive **systemd** or the **Docker socket** only work on
+Linux (and typically need root). Use a Linux VM or cloud VPS when exercising
+`docksight install`, `docksight agent install`, or agent service commands.
+
 ## Project conventions
 
 - **Frontend:** feature folders under `apps/web/src/features`, shared UI under `components`.
