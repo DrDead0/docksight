@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNormalizeServerURL(t *testing.T) {
@@ -299,6 +300,80 @@ func TestReadServerURLMissingKey(t *testing.T) {
 
 	if _, err := ReadServerURL(layout); err == nil {
 		t.Fatal("expected an error when server.url is absent")
+	}
+}
+
+func TestUpdateServerURLPreservesConfigAndIdentity(t *testing.T) {
+
+	layout := DefaultLayout()
+	layout.ConfigDir = t.TempDir()
+
+	config := `agent:
+  data_dir: "/custom/data"
+  identity_file: "/custom/data/identity.json"
+server:
+  url: "wss://old.example.com/agents"
+docker:
+  socket: "/custom/docker.sock"
+logging:
+  level: "debug"
+`
+
+	if err := os.WriteFile(layout.ConfigPath(), []byte(config), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	identity := []byte(`{"id":"preserve-me"}`)
+
+	if err := os.WriteFile(layout.IdentityPath(), identity, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	identityTime := time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC)
+
+	if err := os.Chtimes(layout.IdentityPath(), identityTime, identityTime); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpdateServerURL(layout, "wss://new.example.com/agents"); err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := os.ReadFile(layout.ConfigPath())
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, expected := range []string{
+		`url: "wss://new.example.com/agents"`,
+		`socket: "/custom/docker.sock"`,
+		`level: "debug"`,
+	} {
+
+		if !strings.Contains(string(updated), expected) {
+			t.Errorf("updated config lost %q:\n%s", expected, updated)
+		}
+	}
+
+	identityAfter, err := os.ReadFile(layout.IdentityPath())
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(identityAfter) != string(identity) {
+		t.Fatalf("identity changed from %q to %q", identity, identityAfter)
+	}
+
+	info, err := os.Stat(layout.IdentityPath())
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !info.ModTime().Equal(identityTime) {
+		t.Fatalf("identity mtime changed from %s to %s", identityTime, info.ModTime())
 	}
 }
 

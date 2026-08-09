@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -250,6 +251,105 @@ func ReadServerURL(layout Layout) (string, error) {
 	}
 
 	return "", fmt.Errorf("no server.url found in %s", layout.ConfigPath())
+}
+
+// UpdateServerURL changes only server.url in an existing config file. Other
+// operator-managed settings are preserved, and identity.json is never opened.
+func UpdateServerURL(layout Layout, serverURL string) error {
+
+	content, err := os.ReadFile(layout.ConfigPath())
+
+	if err != nil {
+		return err
+	}
+
+	info, err := os.Stat(layout.ConfigPath())
+
+	if err != nil {
+		return err
+	}
+
+	updated, err := replaceServerURL(string(content), serverURL)
+
+	if err != nil {
+		return err
+	}
+
+	staged, err := os.CreateTemp(layout.ConfigDir, ".config-")
+
+	if err != nil {
+		return err
+	}
+
+	stagedPath := staged.Name()
+
+	defer os.Remove(stagedPath)
+
+	if _, err := staged.WriteString(updated); err != nil {
+		staged.Close()
+		return err
+	}
+
+	if err := staged.Close(); err != nil {
+		return err
+	}
+
+	if err := os.Chmod(stagedPath, info.Mode().Perm()); err != nil {
+		return err
+	}
+
+	if err := os.Rename(stagedPath, layout.ConfigPath()); err != nil {
+		return fmt.Errorf("failed to update %s: %w", layout.ConfigPath(), err)
+	}
+
+	return nil
+}
+
+func replaceServerURL(content string, serverURL string) (string, error) {
+
+	lines := strings.SplitAfter(content, "\n")
+	inServer := false
+
+	for index, rawLine := range lines {
+
+		line := rawLine
+		ending := ""
+
+		switch {
+		case strings.HasSuffix(line, "\r\n"):
+			line = strings.TrimSuffix(line, "\r\n")
+			ending = "\r\n"
+		case strings.HasSuffix(line, "\n"):
+			line = strings.TrimSuffix(line, "\n")
+			ending = "\n"
+		}
+
+		trimmed := strings.TrimSpace(line)
+
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+			inServer = strings.HasPrefix(trimmed, "server:")
+			continue
+		}
+
+		if !inServer {
+			continue
+		}
+
+		if _, found := strings.CutPrefix(trimmed, "url:"); !found {
+			continue
+		}
+
+		indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+		lines[index] = indent + "url: " + strconv.Quote(serverURL) + ending
+
+		return strings.Join(lines, ""), nil
+	}
+
+	return "", fmt.Errorf("no server.url found in config")
 }
 
 // IdentityExists reports whether this host has already registered.
