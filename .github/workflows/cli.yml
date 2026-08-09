@@ -1,0 +1,44 @@
+name: CLI
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'apps/cli/**'
+      - '.github/workflows/cli.yml'
+  pull_request:
+    paths:
+      - 'apps/cli/**'
+      - '.github/workflows/cli.yml'
+
+jobs:
+  build:
+    name: build & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/cli
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/cli/go.mod
+          cache-dependency-path: apps/cli/go.sum
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Cross-compile release targets
+        run: |
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            echo "building $target"
+            CGO_ENABLED=0 GOOS=${target%/*} GOARCH=${target#*/} \
+              go build -o /dev/null .
+          done
