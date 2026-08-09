@@ -14,9 +14,7 @@ var agentPlaceholders = []struct {
 	short string
 }{
 	{"uninstall", "Remove the DockSight Agent from this host"},
-	{"start", "Start the agent service"},
-	{"stop", "Stop the agent service"},
-	{"restart", "Restart the agent service"},
+	// start / stop / restart are real commands in agent_service.go
 	{"status", "Show the agent service status"},
 	{"logs", "Show the agent service logs"},
 	{"config", "Show or edit the agent configuration"},
