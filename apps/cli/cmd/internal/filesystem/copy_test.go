@@ -17,7 +17,7 @@ func bundle(t *testing.T) string {
 	}
 
 	files := map[string]string{
-		"VERSION":               "v0.0.4",
+		"VERSION":               "v0.0.1",
 		".env.example":          "PORT=2002",
 		"compose/docksight.yml": "services: {}",
 	}
@@ -41,7 +41,7 @@ func TestCopyDir(t *testing.T) {
 	}
 
 	for name, want := range map[string]string{
-		"VERSION":               "v0.0.4",
+		"VERSION":               "v0.0.1",
 		".env.example":          "PORT=2002",
 		"compose/docksight.yml": "services: {}",
 	} {
@@ -63,8 +63,10 @@ func TestCopyDirOverwritesExistingInstall(t *testing.T) {
 	source := bundle(t)
 	destination := t.TempDir()
 
-	// A previous install left an older file in place.
-	if err := os.WriteFile(filepath.Join(destination, "VERSION"), []byte("v0.0.1"), 0o644); err != nil {
+	// A previous install left a file in place. Its content only has to differ
+	// from the bundle's VERSION — if the two matched, a CopyDir that silently
+	// did nothing would pass this test.
+	if err := os.WriteFile(filepath.Join(destination, "VERSION"), []byte("previous-install"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -78,7 +80,7 @@ func TestCopyDirOverwritesExistingInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if string(got) != "v0.0.4" {
+	if string(got) != "v0.0.1" {
 		t.Fatalf("stale file not replaced: %q", string(got))
 	}
 }

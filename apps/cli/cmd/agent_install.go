@@ -103,7 +103,7 @@ func init() {
 		&agentVersion,
 		"version",
 		"",
-		"install a specific release tag instead of the latest, e.g. v0.0.12",
+		"install a specific release tag instead of the latest, e.g. v0.0.1",
 	)
 
 	agentCMD.AddCommand(agentInstallCMD)

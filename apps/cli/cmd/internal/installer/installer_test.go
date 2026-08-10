@@ -271,7 +271,7 @@ func fullHarness(t *testing.T, version string) (*Installer, *githubStub, *fakeSt
 
 func TestInstall(t *testing.T) {
 
-	install, _, stack, reporter := harness(t, "v0.0.4")
+	install, _, stack, reporter := harness(t, "v0.0.1")
 
 	if err := install.Install(context.Background()); err != nil {
 		t.Fatal(err)
@@ -324,7 +324,7 @@ func TestInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if recorded.PlatformVersion != "v0.0.4" {
+	if recorded.PlatformVersion != "v0.0.1" {
 		t.Errorf("platform version recorded as %q", recorded.PlatformVersion)
 	}
 
@@ -341,7 +341,7 @@ func TestInstall(t *testing.T) {
 // binary into the install directory.
 func TestInstallKeepsDeliverablesSeparate(t *testing.T) {
 
-	install, _, _, _ := harness(t, "v0.0.4")
+	install, _, _, _ := harness(t, "v0.0.1")
 
 	if err := install.Install(context.Background()); err != nil {
 		t.Fatal(err)
@@ -365,7 +365,7 @@ func TestInstallKeepsDeliverablesSeparate(t *testing.T) {
 // were created with.
 func TestInstallTwicePreservesCredentials(t *testing.T) {
 
-	install, _, _, _ := harness(t, "v0.0.4")
+	install, _, _, _ := harness(t, "v0.0.1")
 
 	ctx := context.Background()
 
@@ -396,7 +396,7 @@ func TestInstallTwicePreservesCredentials(t *testing.T) {
 
 func TestUpdatePlatformRecreatesStack(t *testing.T) {
 
-	install, stub, stack, _ := harness(t, "v0.0.4")
+	install, stub, stack, _ := harness(t, "v0.0.1")
 
 	ctx := context.Background()
 
@@ -404,9 +404,11 @@ func TestUpdatePlatformRecreatesStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// A newer release appears.
-	stub.version = "v0.0.5"
-	stub.bundle = bundleArchive(t, "v0.0.5")
+	// A newer release appears. It has to be a different version from the one
+	// installed above, or the assertions below would hold whether or not the
+	// bundle was actually replaced.
+	stub.version = "v0.0.2"
+	stub.bundle = bundleArchive(t, "v0.0.2")
 
 	latest, err := install.LatestRelease(ctx)
 
@@ -424,7 +426,7 @@ func TestUpdatePlatformRecreatesStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if strings.TrimSpace(string(version)) != "v0.0.5" {
+	if strings.TrimSpace(string(version)) != "v0.0.2" {
 		t.Errorf("bundle not replaced: %q", string(version))
 	}
 
@@ -438,7 +440,7 @@ func TestUpdatePlatformRecreatesStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if recorded.PlatformVersion != "v0.0.5" {
+	if recorded.PlatformVersion != "v0.0.2" {
 		t.Errorf("platform version recorded as %q", recorded.PlatformVersion)
 	}
 }
@@ -446,7 +448,7 @@ func TestUpdatePlatformRecreatesStack(t *testing.T) {
 // Updating the CLI must not touch the platform or restart the stack.
 func TestUpdateCLILeavesPlatformAlone(t *testing.T) {
 
-	install, stub, stack, _ := harness(t, "v0.0.4")
+	install, stub, stack, _ := harness(t, "v0.0.1")
 
 	ctx := context.Background()
 
@@ -454,8 +456,10 @@ func TestUpdateCLILeavesPlatformAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stub.version = "v0.0.5"
-	stub.cli = []byte("#!/bin/sh\necho docksight v0.0.5\n")
+	// A different version from the installed one, so "the platform was left
+	// alone" is something the assertions can actually distinguish.
+	stub.version = "v0.0.2"
+	stub.cli = []byte("#!/bin/sh\necho docksight v0.0.2\n")
 
 	latest, err := install.LatestRelease(ctx)
 
@@ -473,7 +477,7 @@ func TestUpdateCLILeavesPlatformAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(string(installed), "v0.0.5") {
+	if !strings.Contains(string(installed), "v0.0.2") {
 		t.Errorf("CLI not replaced: %q", string(installed))
 	}
 
@@ -483,11 +487,12 @@ func TestUpdateCLILeavesPlatformAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if recorded.CLIVersion != "v0.0.5" {
+	if recorded.CLIVersion != "v0.0.2" {
 		t.Errorf("CLI version recorded as %q", recorded.CLIVersion)
 	}
 
-	if recorded.PlatformVersion != "v0.0.4" {
+	// The whole point: the CLI moved to v0.0.2 and the platform did not.
+	if recorded.PlatformVersion != "v0.0.1" {
 		t.Errorf("platform version changed to %q", recorded.PlatformVersion)
 	}
 
@@ -498,7 +503,7 @@ func TestUpdateCLILeavesPlatformAlone(t *testing.T) {
 
 func TestInstallReportsMissingBundle(t *testing.T) {
 
-	install, _, _, _ := harness(t, "v0.0.4")
+	install, _, _, _ := harness(t, "v0.0.1")
 
 	// A release that publishes only the CLI.
 	install.Releases.BaseURL = emptyReleaseServer(t)
@@ -516,7 +521,7 @@ func TestInstallReportsMissingBundle(t *testing.T) {
 
 func TestInstallSurfacesStackFailure(t *testing.T) {
 
-	install, _, stack, _ := harness(t, "v0.0.4")
+	install, _, stack, _ := harness(t, "v0.0.1")
 
 	stack.services = []compose.Service{
 		{Service: "server", State: "exited", ExitCode: 3},
@@ -541,7 +546,7 @@ func emptyReleaseServer(t *testing.T) string {
 
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprint(w, `{"tag_name":"v0.0.4","assets":[{"name":"checksums.txt","browser_download_url":"https://example.com/x"}]}`)
+			fmt.Fprint(w, `{"tag_name":"v0.0.1","assets":[{"name":"checksums.txt","browser_download_url":"https://example.com/x"}]}`)
 		},
 	))
 
@@ -553,7 +558,7 @@ func emptyReleaseServer(t *testing.T) string {
 // The CLI has a home, but a home nobody searches is a CLI nobody can run.
 func TestInstallPutsTheCLIOnPath(t *testing.T) {
 
-	install, _, _, host, reporter := fullHarness(t, "v0.0.4")
+	install, _, _, host, reporter := fullHarness(t, "v0.0.1")
 
 	if err := install.Install(context.Background()); err != nil {
 		t.Fatal(err)
@@ -572,7 +577,7 @@ func TestInstallPutsTheCLIOnPath(t *testing.T) {
 // before anything is listening on it.
 func TestInstallOpensThePlatformPort(t *testing.T) {
 
-	install, _, stack, host, _ := fullHarness(t, "v0.0.4")
+	install, _, stack, host, _ := fullHarness(t, "v0.0.1")
 
 	if err := install.Install(context.Background()); err != nil {
 		t.Fatal(err)
@@ -591,7 +596,7 @@ func TestInstallOpensThePlatformPort(t *testing.T) {
 // silently unreachable.
 func TestInstallStopsWhenThePortCannotBeOpened(t *testing.T) {
 
-	install, _, stack, host, _ := fullHarness(t, "v0.0.4")
+	install, _, stack, host, _ := fullHarness(t, "v0.0.1")
 
 	host.portErr = errors.New("the firewall service is not running")
 
@@ -613,7 +618,7 @@ func TestInstallStopsWhenThePortCannotBeOpened(t *testing.T) {
 // Re-running an install must not append a second PATH entry or a second rule.
 func TestInstallHostChangesAreIdempotent(t *testing.T) {
 
-	install, _, _, host, _ := fullHarness(t, "v0.0.4")
+	install, _, _, host, _ := fullHarness(t, "v0.0.1")
 
 	ctx := context.Background()
 
@@ -639,7 +644,7 @@ func TestInstallHostChangesAreIdempotent(t *testing.T) {
 // is asserted against the real implementation in the filesystem package.
 func TestInstallProtectsGeneratedCredentials(t *testing.T) {
 
-	install, _, _, host, _ := fullHarness(t, "v0.0.4")
+	install, _, _, host, _ := fullHarness(t, "v0.0.1")
 
 	if err := install.Install(context.Background()); err != nil {
 		t.Fatal(err)
@@ -665,7 +670,7 @@ func TestInstallProtectsGeneratedCredentials(t *testing.T) {
 // the file was already there.
 func TestInstallProtectsPreExistingCredentials(t *testing.T) {
 
-	install, _, _, host, _ := fullHarness(t, "v0.0.4")
+	install, _, _, host, _ := fullHarness(t, "v0.0.1")
 
 	ctx := context.Background()
 
@@ -686,7 +691,7 @@ func TestInstallProtectsPreExistingCredentials(t *testing.T) {
 // credentials readable and report success.
 func TestInstallStopsWhenCredentialsCannotBeProtected(t *testing.T) {
 
-	install, _, stack, host, _ := fullHarness(t, "v0.0.4")
+	install, _, stack, host, _ := fullHarness(t, "v0.0.1")
 
 	host.protectErr = errors.New("failed to restrict access")
 

@@ -1,7 +1,7 @@
 // Package selfinstall places a CLI executable at its final location.
 //
 // It exists because the CLI is downloaded and executed from an arbitrary path
-// ("./docksight", "~/Downloads/docksight-cli-v0.0.4-linux-amd64") and must end
+// ("./docksight", "~/Downloads/docksight-cli-v0.0.1-linux-amd64") and must end
 // up at a stable one, without the running process being disturbed.
 package selfinstall
 

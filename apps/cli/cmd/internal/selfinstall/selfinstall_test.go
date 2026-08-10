@@ -9,7 +9,7 @@ import (
 
 func TestInstallCopiesBinary(t *testing.T) {
 
-	source := filepath.Join(t.TempDir(), "docksight-cli-v0.0.4-linux-amd64")
+	source := filepath.Join(t.TempDir(), "docksight-cli-v0.0.1-linux-amd64")
 
 	if err := os.WriteFile(source, []byte("#!/bin/sh\necho docksight\n"), 0o644); err != nil {
 		t.Fatal(err)

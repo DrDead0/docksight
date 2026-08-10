@@ -6,7 +6,7 @@ import (
 
 func release(assets ...string) *Release {
 
-	built := &Release{TagName: "v0.0.4"}
+	built := &Release{TagName: "v0.0.1"}
 
 	for _, name := range assets {
 		built.Assets = append(built.Assets, Asset{
@@ -22,8 +22,8 @@ func TestPlatformBundleSelection(t *testing.T) {
 
 	rel := release(
 		"checksums.txt",
-		"docksight-cli-v0.0.4-linux-amd64",
-		"docksight-platform-v0.0.4.tar.gz",
+		"docksight-cli-v0.0.1-linux-amd64",
+		"docksight-platform-v0.0.1.tar.gz",
 	)
 
 	asset, err := rel.PlatformBundle()
@@ -32,12 +32,15 @@ func TestPlatformBundleSelection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if asset.Name != "docksight-platform-v0.0.4.tar.gz" {
+	if asset.Name != "docksight-platform-v0.0.1.tar.gz" {
 		t.Fatalf("picked %q", asset.Name)
 	}
 }
 
-// Releases up to v0.0.3 named the bundle docksight-install-*.
+// The earliest bundles were named docksight-install-*, and a current CLI must
+// still recognise one. The version in the name is deliberately not the
+// current release: the point is the prefix, and reusing the live version
+// would suggest today's bundles carry the legacy name.
 func TestPlatformBundleAcceptsLegacyName(t *testing.T) {
 
 	asset, err := release("docksight-install-v0.0.3.tar.gz").PlatformBundle()
@@ -54,7 +57,7 @@ func TestPlatformBundleAcceptsLegacyName(t *testing.T) {
 // The CLI must never be served as the platform bundle, whatever it is called.
 func TestPlatformBundleIgnoresCLI(t *testing.T) {
 
-	if _, err := release("docksight-cli-v0.0.4-linux-amd64.tar.gz").PlatformBundle(); err == nil {
+	if _, err := release("docksight-cli-v0.0.1-linux-amd64.tar.gz").PlatformBundle(); err == nil {
 		t.Fatal("a CLI archive was accepted as the platform bundle")
 	}
 }
@@ -62,18 +65,18 @@ func TestPlatformBundleIgnoresCLI(t *testing.T) {
 func TestCLIBinarySelectionPerTarget(t *testing.T) {
 
 	rel := release(
-		"docksight-platform-v0.0.4.tar.gz",
-		"docksight-cli-v0.0.4-linux-amd64",
-		"docksight-cli-v0.0.4-linux-arm64",
-		"docksight-cli-v0.0.4-darwin-arm64",
-		"docksight-cli-v0.0.4-windows-amd64.exe",
+		"docksight-platform-v0.0.1.tar.gz",
+		"docksight-cli-v0.0.1-linux-amd64",
+		"docksight-cli-v0.0.1-linux-arm64",
+		"docksight-cli-v0.0.1-darwin-arm64",
+		"docksight-cli-v0.0.1-windows-amd64.exe",
 	)
 
 	cases := map[Target]string{
-		{OS: "linux", Arch: "amd64"}:   "docksight-cli-v0.0.4-linux-amd64",
-		{OS: "linux", Arch: "arm64"}:   "docksight-cli-v0.0.4-linux-arm64",
-		{OS: "darwin", Arch: "arm64"}:  "docksight-cli-v0.0.4-darwin-arm64",
-		{OS: "windows", Arch: "amd64"}: "docksight-cli-v0.0.4-windows-amd64.exe",
+		{OS: "linux", Arch: "amd64"}:   "docksight-cli-v0.0.1-linux-amd64",
+		{OS: "linux", Arch: "arm64"}:   "docksight-cli-v0.0.1-linux-arm64",
+		{OS: "darwin", Arch: "arm64"}:  "docksight-cli-v0.0.1-darwin-arm64",
+		{OS: "windows", Arch: "amd64"}: "docksight-cli-v0.0.1-windows-amd64.exe",
 	}
 
 	for target, want := range cases {
@@ -93,7 +96,7 @@ func TestCLIBinarySelectionPerTarget(t *testing.T) {
 // amd64 must never be served to an arm64 machine: the binary would not run.
 func TestCLIBinaryMissingTarget(t *testing.T) {
 
-	rel := release("docksight-cli-v0.0.4-linux-amd64")
+	rel := release("docksight-cli-v0.0.1-linux-amd64")
 
 	_, err := rel.CLIBinary(Target{OS: "linux", Arch: "arm64"})
 
@@ -110,7 +113,7 @@ func TestFindErrorListsAvailableAssets(t *testing.T) {
 		t.Fatal("expected an error")
 	}
 
-	if got := err.Error(); !contains(got, "checksums.txt") || !contains(got, "v0.0.4") {
+	if got := err.Error(); !contains(got, "checksums.txt") || !contains(got, "v0.0.1") {
 		t.Fatalf("error is not diagnosable: %s", got)
 	}
 }

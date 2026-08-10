@@ -78,7 +78,7 @@ func TestExtractTarGz(t *testing.T) {
 
 	archive := tarball(t,
 		entry{name: "bundle/", dir: true, mode: 0o755},
-		entry{name: "bundle/VERSION", content: "v0.0.4"},
+		entry{name: "bundle/VERSION", content: "v0.0.1"},
 		entry{name: "bundle/.env.example", content: "JWT_SECRET=x"},
 		entry{name: "bundle/nested/default.conf", content: "server {}"},
 	)
@@ -90,7 +90,7 @@ func TestExtractTarGz(t *testing.T) {
 	}
 
 	for name, want := range map[string]string{
-		"bundle/VERSION":             "v0.0.4",
+		"bundle/VERSION":             "v0.0.1",
 		"bundle/.env.example":        "JWT_SECRET=x",
 		"bundle/nested/default.conf": "server {}",
 	} {
@@ -142,7 +142,7 @@ func TestExtractRejectsAbsolutePaths(t *testing.T) {
 func TestExtractSkipsSymlinks(t *testing.T) {
 
 	archive := tarball(t,
-		entry{name: "bundle/VERSION", content: "v0.0.4"},
+		entry{name: "bundle/VERSION", content: "v0.0.1"},
 		entry{name: "bundle/link", typeFlg: tar.TypeSymlink},
 	)
 

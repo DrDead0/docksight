@@ -25,8 +25,8 @@ func TestSaveAndLoad(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nested", "state.json")
 
 	saved := State{
-		CLIVersion:      "v0.0.4",
-		PlatformVersion: "v0.0.3",
+		CLIVersion:      "v0.0.1",
+		PlatformVersion: "v0.0.1",
 		InstalledAt:     time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC),
 		UpdatedAt:       time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC),
 	}
@@ -41,7 +41,7 @@ func TestSaveAndLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if loaded.CLIVersion != "v0.0.4" || loaded.PlatformVersion != "v0.0.3" {
+	if loaded.CLIVersion != "v0.0.1" || loaded.PlatformVersion != "v0.0.1" {
 		t.Fatalf("versions not round-tripped: %+v", loaded)
 	}
 
@@ -59,7 +59,7 @@ func TestVersionsAreIndependent(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "state.json")
 
-	if err := Save(path, State{CLIVersion: "v0.0.4", PlatformVersion: "v0.0.4"}); err != nil {
+	if err := Save(path, State{CLIVersion: "v0.0.1", PlatformVersion: "v0.0.1"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -69,7 +69,9 @@ func TestVersionsAreIndependent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	current.CLIVersion = "v0.0.5"
+	// Moving one field to a different version is what makes the other field
+	// staying put observable.
+	current.CLIVersion = "v0.0.2"
 
 	if err := Save(path, current); err != nil {
 		t.Fatal(err)
@@ -81,7 +83,7 @@ func TestVersionsAreIndependent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if reloaded.CLIVersion != "v0.0.5" || reloaded.PlatformVersion != "v0.0.4" {
+	if reloaded.CLIVersion != "v0.0.2" || reloaded.PlatformVersion != "v0.0.1" {
 		t.Fatalf("independent update failed: %+v", reloaded)
 	}
 }
@@ -90,11 +92,13 @@ func TestSaveOverwritesExisting(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "state.json")
 
-	if err := Save(path, State{PlatformVersion: "v0.0.3"}); err != nil {
+	if err := Save(path, State{PlatformVersion: "v0.0.1"}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := Save(path, State{PlatformVersion: "v0.0.4"}); err != nil {
+	// The second value has to differ, or an overwrite that silently did
+	// nothing would pass.
+	if err := Save(path, State{PlatformVersion: "v0.0.2"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -104,7 +108,7 @@ func TestSaveOverwritesExisting(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if loaded.PlatformVersion != "v0.0.4" {
+	if loaded.PlatformVersion != "v0.0.2" {
 		t.Fatalf("got %q", loaded.PlatformVersion)
 	}
 }

@@ -81,7 +81,7 @@ func init() {
 		&agentUpdateVersion,
 		"version",
 		"",
-		"update to a specific release tag instead of the latest, e.g. v0.0.12",
+		"update to a specific release tag instead of the latest, e.g. v0.0.1",
 	)
 
 	agentUpdateCMD.Flags().StringVar(

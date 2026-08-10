@@ -11,10 +11,10 @@ import (
 )
 
 const releaseBody = `{
-	"tag_name": "v0.0.4",
+	"tag_name": "v0.0.1",
 	"assets": [
-		{"name": "docksight-platform-v0.0.4.tar.gz", "browser_download_url": "https://example.com/platform", "size": 3382},
-		{"name": "docksight-cli-v0.0.4-linux-amd64", "browser_download_url": "https://example.com/cli", "size": 9000000}
+		{"name": "docksight-platform-v0.0.1.tar.gz", "browser_download_url": "https://example.com/platform", "size": 3382},
+		{"name": "docksight-cli-v0.0.1-linux-amd64", "browser_download_url": "https://example.com/cli", "size": 9000000}
 	]
 }`
 
@@ -50,7 +50,7 @@ func TestLatest(t *testing.T) {
 		t.Fatalf("requested %q", requested)
 	}
 
-	if latest.Version() != "v0.0.4" {
+	if latest.Version() != "v0.0.1" {
 		t.Fatalf("got version %q", latest.Version())
 	}
 
@@ -68,11 +68,13 @@ func TestByTag(t *testing.T) {
 		w.Write([]byte(releaseBody))
 	})
 
-	if _, err := client.ByTag(context.Background(), "v0.0.3"); err != nil {
+	// Deliberately not the tag the stub reports in its body: the path must be
+	// built from the argument, not echoed back from the response.
+	if _, err := client.ByTag(context.Background(), "v0.0.2"); err != nil {
 		t.Fatal(err)
 	}
 
-	if requested != "/repos/Open-Source-Kigali/docksight/releases/tags/v0.0.3" {
+	if requested != "/repos/Open-Source-Kigali/docksight/releases/tags/v0.0.2" {
 		t.Fatalf("requested %q", requested)
 	}
 }

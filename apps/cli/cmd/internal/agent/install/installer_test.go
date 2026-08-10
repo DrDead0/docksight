@@ -198,7 +198,7 @@ func harness(t *testing.T, withAgent bool) (*Installer, *fakeUnits, *recordingRe
 	reporter := &recordingReporter{}
 
 	installer := New(layout, "wss://platform.example.com/agents", reporter)
-	installer.Releases.BaseURL = releaseStub(t, "v0.0.9", withAgent)
+	installer.Releases.BaseURL = releaseStub(t, "v0.0.1", withAgent)
 	installer.Units = units
 	installer.SkipValidation = true
 	installer.Settle = 10 * time.Millisecond
@@ -463,13 +463,15 @@ func TestInstallPinnedVersion(t *testing.T) {
 
 	installer, _, reporter := harness(t, true)
 
-	installer.Version = "v0.0.5"
+	// Not the version the stub serves as latest, so asking for the pinned one
+	// is distinguishable from asking for whatever is newest.
+	installer.Version = "v0.0.2"
 
 	if _, err := installer.Install(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
-	if !requestedPath(t, "/releases/tags/v0.0.5") {
+	if !requestedPath(t, "/releases/tags/v0.0.2") {
 		t.Fatalf("the pinned tag was not requested, paths: %v", requestedPaths)
 	}
 
@@ -477,7 +479,7 @@ func TestInstallPinnedVersion(t *testing.T) {
 		t.Error("the latest release was requested despite a pinned version")
 	}
 
-	if !reporter.contains("Fetching release v0.0.5") {
+	if !reporter.contains("Fetching release v0.0.2") {
 		t.Error("the pinned version was not reported")
 	}
 }

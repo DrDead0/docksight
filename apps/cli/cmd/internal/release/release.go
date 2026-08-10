@@ -11,7 +11,7 @@ type Release struct {
 	Assets  []Asset `json:"assets"`
 }
 
-// Version is the release tag, e.g. "v0.0.4".
+// Version is the release tag, e.g. "v0.0.1".
 func (r *Release) Version() string {
 	return r.TagName
 }

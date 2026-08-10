@@ -9,17 +9,19 @@ import (
 // the single place in the codebase that knows what a DockSight asset is
 // called; everything else asks for an asset by kind.
 //
-//	platform bundle : docksight-platform-v0.0.4.tar.gz
-//	CLI binary      : docksight-cli-v0.0.4-linux-amd64
-//	agent binary    : docksight-agent-v0.0.4-linux-amd64
+//	platform bundle : docksight-platform-v0.0.1.tar.gz
+//	CLI binary      : docksight-cli-v0.0.1-linux-amd64
+//	agent binary    : docksight-agent-v0.0.1-linux-amd64
 const (
 	platformPrefix = "docksight-platform-"
 	cliPrefix      = "docksight-cli-"
 	agentPrefix    = "docksight-agent-"
 	archiveSuffix  = ".tar.gz"
 
-	// legacyPlatformPrefix is the name used by releases up to v0.0.3, kept so
-	// a new CLI can still install an older platform bundle.
+	// legacyPlatformPrefix is the name the earliest bundles were published
+	// under, kept so a new CLI can still install one of them. No version
+	// number is cited here on purpose: release numbering was reset, so any
+	// number would describe the wrong releases.
 	legacyPlatformPrefix = "docksight-install-"
 )
 
