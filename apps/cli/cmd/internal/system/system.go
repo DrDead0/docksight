@@ -89,17 +89,28 @@ func PlatformRequirements() []Requirement {
 	}
 }
 
-// AgentRequirements is what `docksight agent install` needs. The agent runs
-// as a systemd service and downloads its binary from GitHub, so it needs two
-// things the platform install does not: systemd, and outbound connectivity.
+// AgentRequirements is what `docksight agent install` needs. The agent is
+// supervised by the host's service manager and downloads its binary from
+// GitHub, so it needs two things the platform install does not: a usable
+// service manager, and outbound connectivity.
+//
+// The middle of the list is platform-specific. Checking systemd on a Windows
+// host would stat a path that cannot exist and reject a machine that is
+// perfectly able to run the agent, so each platform contributes its own
+// checks through agentServiceRequirements.
 func AgentRequirements() []Requirement {
 
-	return []Requirement{
-		{Name: "Checking operating system", Check: func(context.Context) error { return CheckOS() }},
+	requirements := []Requirement{
+		{Name: "Checking operating system", Check: func(context.Context) error { return CheckAgentOS() }},
 		{Name: "Checking architecture", Check: func(context.Context) error { return CheckArchitecture() }},
 		{Name: "Checking Docker Engine", Check: CheckDockerInstalled},
 		{Name: "Checking Docker daemon", Check: CheckDockerRunning},
-		{Name: "Checking systemd", Check: func(context.Context) error { return CheckSystemd() }},
-		{Name: "Checking internet connectivity", Check: CheckInternet},
 	}
+
+	requirements = append(requirements, agentServiceRequirements()...)
+
+	return append(requirements, Requirement{
+		Name:  "Checking internet connectivity",
+		Check: CheckInternet,
+	})
 }

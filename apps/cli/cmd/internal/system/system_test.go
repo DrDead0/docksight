@@ -143,15 +143,48 @@ func TestRequirementSets(t *testing.T) {
 		names = append(names, requirement.Name)
 	}
 
-	joined := strings.Join(names, "|")
+	joined := strings.ToLower(strings.Join(names, "|"))
 
-	// The two checks the agent needs and the platform install does not.
-	for _, required := range []string{"systemd", "internet"} {
+	// Outbound connectivity is needed on every platform: the agent binary
+	// comes from GitHub.
+	if !strings.Contains(joined, "internet") {
+		t.Errorf("agent requirements do not check connectivity: %v", names)
+	}
 
-		if !strings.Contains(strings.ToLower(joined), required) {
-			t.Errorf("agent requirements do not check %s: %v", required, names)
+	// The service manager is platform-specific, and checking the wrong one
+	// would reject a host that can run the agent perfectly well.
+	required := "systemd"
+	forbidden := "service control manager"
+
+	if runtime.GOOS == "windows" {
+		required, forbidden = "service control manager", "systemd"
+	}
+
+	if !strings.Contains(joined, required) {
+		t.Errorf("agent requirements do not check %s: %v", required, names)
+	}
+
+	if strings.Contains(joined, forbidden) {
+		t.Errorf("agent requirements check %s on %s: %v", forbidden, runtime.GOOS, names)
+	}
+}
+
+// Elevation is checked up front on Windows because the alternative is a raw
+// "Access is denied." from the SCM after the binary has already been copied.
+func TestAgentRequirementsCheckElevationOnWindows(t *testing.T) {
+
+	if runtime.GOOS != "windows" {
+		t.Skip("elevation is surfaced as a permission error on this platform")
+	}
+
+	for _, requirement := range AgentRequirements() {
+
+		if strings.Contains(strings.ToLower(requirement.Name), "administrator") {
+			return
 		}
 	}
+
+	t.Fatal("agent requirements do not check for Administrator rights")
 }
 
 func TestCheckOS(t *testing.T) {
@@ -171,6 +204,47 @@ func TestCheckOS(t *testing.T) {
 		if !strings.Contains(err.Error(), runtime.GOOS) {
 			t.Fatalf("error does not name the OS: %v", err)
 		}
+	}
+}
+
+// The agent gate is wider than the platform gate: it has an implementation
+// for the Windows service manager, and the platform stack does not.
+func TestCheckAgentOS(t *testing.T) {
+
+	err := CheckAgentOS()
+
+	switch runtime.GOOS {
+
+	case "linux", "windows":
+
+		if err != nil {
+			t.Fatalf("%s rejected: %v", runtime.GOOS, err)
+		}
+
+	default:
+
+		if err == nil {
+			t.Fatalf("%s was accepted", runtime.GOOS)
+		}
+
+		if !strings.Contains(err.Error(), runtime.GOOS) {
+			t.Fatalf("error does not name the OS: %v", err)
+		}
+	}
+}
+
+func TestElevationHintNamesThisPlatform(t *testing.T) {
+
+	hint := ElevationHint()
+
+	want := "root"
+
+	if runtime.GOOS == "windows" {
+		want = "Administrator"
+	}
+
+	if !strings.Contains(hint, want) {
+		t.Fatalf("hint %q does not mention %s", hint, want)
 	}
 }
 

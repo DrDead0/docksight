@@ -18,21 +18,34 @@ import (
 	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/systemd"
 )
 
-// UnitController is the systemd surface the installer needs. Depending on an
-// interface rather than the concrete manager keeps the phases testable on a
-// machine with no systemd.
+// UnitController is the service-manager surface the installer needs.
+// Depending on an interface rather than a concrete manager is what keeps the
+// phases testable on a machine with neither systemd nor an SCM, and it is
+// what let Windows support be a second implementation rather than a rewrite.
+//
+// The vocabulary is systemd's because that is where it came from. Three
+// methods have no literal Windows counterpart and are documented at
+// scm.Manager: WriteUnit writes no file, DaemonReload does nothing, and
+// Restarts counts something the SCM does not record. The interface was left
+// as it is rather than generalised — a name that fits both platforms exactly
+// would still describe two different mechanisms, and the honest explanation
+// belongs at the implementation, not in a renamed method.
 type UnitController interface {
 	UnitPath(unit string) string
 	WriteUnit(unit string, content string) (bool, error)
 	DaemonReload(ctx context.Context) error
 	Enable(ctx context.Context, unit string) error
+	Start(ctx context.Context, unit string) error
+	Stop(ctx context.Context, unit string) error
 	Restart(ctx context.Context, unit string) error
 	IsActive(ctx context.Context, unit string) (bool, error)
 	Restarts(ctx context.Context, unit string) (int, error)
 	Logs(ctx context.Context, unit string, lines int) (string, error)
 }
 
-// compile-time proof that the systemd manager satisfies the interface.
+// compile-time proof that the systemd manager satisfies the interface. The
+// SCM manager is proved the same way in controller_windows.go, where it is
+// the only file that can import it.
 var _ UnitController = (*systemd.Manager)(nil)
 
 // Installer performs the agent installation.
@@ -63,7 +76,8 @@ type Installer struct {
 	SkipValidation bool
 }
 
-// New returns an installer wired with the real GitHub client and systemd.
+// New returns an installer wired with the real GitHub client and the service
+// manager this host runs.
 func New(layout Layout, serverURL string, reporter progress.Reporter) *Installer {
 
 	if reporter == nil {
@@ -74,7 +88,7 @@ func New(layout Layout, serverURL string, reporter progress.Reporter) *Installer
 		Layout:    layout,
 		ServerURL: serverURL,
 		Releases:  release.NewClient(),
-		Units:     systemd.NewManager(),
+		Units:     NewController(layout),
 		Report:    reporter,
 		Target:    release.CurrentTarget(),
 		Settle:    defaultSettle,
@@ -110,9 +124,9 @@ func (i *Installer) Install(ctx context.Context) (*Health, error) {
 		return nil, err
 	}
 
-	// Phase 5 — systemd service
+	// Phase 5 — register the service with the host's service manager
 	if err := i.installService(ctx); err != nil {
-		return nil, fail(PhaseService, err, "Run this command as root")
+		return nil, fail(PhaseService, err, system.ElevationHint())
 	}
 
 	// Phase 6 — verification
@@ -136,10 +150,24 @@ func (i *Installer) validate(ctx context.Context) error {
 	i.Report.Step("Validating the host")
 
 	if err := system.Validate(ctx, i.Report, system.AgentRequirements()); err != nil {
-		return fail(PhaseValidate, err, "")
+		return fail(PhaseValidate, err, elevationHint(err))
 	}
 
 	return nil
+}
+
+// elevationHint adds the fix to a validation failure that is about
+// privileges, and nothing to any other. Every other check fails for a reason
+// that running as root or as Administrator does not address.
+func elevationHint(err error) string {
+
+	var notElevated *system.NotElevatedError
+
+	if errors.As(err, &notElevated) {
+		return system.ElevationHint()
+	}
+
+	return ""
 }
 
 // resolveRelease returns the release to install: the pinned one when Version
@@ -187,7 +215,7 @@ func (i *Installer) configure() error {
 	registered := IdentityExists(i.Layout)
 
 	if err := WriteConfig(i.Layout, i.ServerURL); err != nil {
-		return fail(PhaseConfigure, err, "Run this command as root")
+		return fail(PhaseConfigure, err, system.ElevationHint())
 	}
 
 	i.Report.Success("Configured platform " + i.ServerURL)
@@ -210,11 +238,11 @@ func (i *Installer) reportHealth(health *Health) {
 		return
 	}
 
-	// Running but unconfirmed is a real state, not a failure: the journal may
+	// Running but unconfirmed is a real state, not a failure: the log may
 	// simply not have the connection line yet on a slow link.
 	i.Report.Warn(
 		"The service is running but no connection to " + i.ServerURL +
-			" was confirmed yet. Follow it with: journalctl -u " + i.Layout.ServiceName + " -f",
+			" was confirmed yet. Follow it with: " + i.Layout.LogsCommand(),
 	)
 }
 

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -149,8 +150,67 @@ func TestRenderConfigMatchesAgentSchema(t *testing.T) {
 		t.Errorf("server url not quoted into the config:\n%s", rendered)
 	}
 
-	if !strings.Contains(rendered, `"/etc/docksight-agent/identity.json"`) {
+	if !strings.Contains(rendered, strconv.Quote(layout.IdentityPath())) {
 		t.Errorf("identity path not written:\n%s", rendered)
+	}
+}
+
+// The generated config is read by an agent on the target host, so every path
+// in it must use that host's separator throughout. A CLI that mixed the two
+// would produce a file the agent parses happily and then cannot act on.
+func TestRenderConfigUsesOneSeparator(t *testing.T) {
+
+	cases := map[string]struct {
+		layout Layout
+		wrong  string
+	}{
+		"linux":   {layout: LinuxLayout(), wrong: `\`},
+		"windows": {layout: WindowsLayout(), wrong: "/"},
+	}
+
+	for name, testCase := range cases {
+
+		t.Run(name, func(t *testing.T) {
+
+			rendered := RenderConfig(testCase.layout, "wss://platform.example.com/agents")
+
+			for _, line := range strings.Split(rendered, "\n") {
+
+				// The platform URL is a URL, not a path, and the Windows
+				// named pipe is neither.
+				if strings.Contains(line, "url:") || strings.Contains(line, "socket:") {
+					continue
+				}
+
+				if strings.Contains(line, testCase.wrong) {
+					t.Errorf("mixed separators in %q:\n%s", line, rendered)
+				}
+			}
+		})
+	}
+}
+
+// The Windows config carries Windows paths that survive YAML unquoting.
+func TestRenderConfigWindowsPaths(t *testing.T) {
+
+	layout := WindowsLayout()
+
+	rendered := RenderConfig(layout, "wss://platform.example.com/agents")
+
+	// %q doubles every backslash, and a YAML double-quoted scalar takes it
+	// back out again. The doubled form is what must appear on disk.
+	for _, expected := range []string{
+		`identity_file: "` + strings.ReplaceAll(layout.IdentityPath(), `\`, `\\`) + `"`,
+		`socket: "\\\\.\\pipe\\docker_engine"`,
+	} {
+
+		if !strings.Contains(rendered, expected) {
+			t.Errorf("rendered config is missing %s:\n%s", expected, rendered)
+		}
+	}
+
+	if !strings.Contains(rendered, "Restart-Service docksight-agent") {
+		t.Errorf("the config tells a Windows operator to use systemctl:\n%s", rendered)
 	}
 }
 
@@ -395,19 +455,82 @@ func TestIdentityExists(t *testing.T) {
 	}
 }
 
-func TestLayoutPaths(t *testing.T) {
+func TestLinuxLayoutPaths(t *testing.T) {
 
-	layout := DefaultLayout()
+	layout := LinuxLayout()
 
 	if layout.BinaryPath != "/usr/local/bin/docksight-agent" {
 		t.Errorf("binary path is %q", layout.BinaryPath)
 	}
 
-	if filepath.ToSlash(layout.ConfigPath()) != "/etc/docksight-agent/config.yaml" {
+	if layout.ConfigPath() != "/etc/docksight-agent/config.yaml" {
 		t.Errorf("config path is %q", layout.ConfigPath())
 	}
 
-	if filepath.ToSlash(layout.IdentityPath()) != "/etc/docksight-agent/identity.json" {
+	if layout.IdentityPath() != "/etc/docksight-agent/identity.json" {
 		t.Errorf("identity path is %q", layout.IdentityPath())
+	}
+
+	if layout.ServiceName != "docksight-agent.service" {
+		t.Errorf("service name is %q", layout.ServiceName)
+	}
+}
+
+// These are asserted on every host, not only on Windows: the joining must
+// come from the layout rather than from whatever the CLI was built for.
+func TestWindowsLayoutPaths(t *testing.T) {
+
+	t.Setenv("ProgramFiles", `C:\Program Files`)
+	t.Setenv("ProgramData", `C:\ProgramData`)
+
+	layout := WindowsLayout()
+
+	expected := map[string]string{
+		"binary":   `C:\Program Files\DockSight\docksight-agent.exe`,
+		"config":   `C:\ProgramData\DockSight\agent\config.yaml`,
+		"identity": `C:\ProgramData\DockSight\agent\identity.json`,
+		"log":      `C:\ProgramData\DockSight\logs\agent.log`,
+	}
+
+	got := map[string]string{
+		"binary":   layout.BinaryPath,
+		"config":   layout.ConfigPath(),
+		"identity": layout.IdentityPath(),
+		"log":      layout.LogPath,
+	}
+
+	for name, want := range expected {
+
+		if got[name] != want {
+			t.Errorf("%s path is %q, want %q", name, got[name], want)
+		}
+	}
+
+	// The SCM matches on the name the agent registers itself under, and that
+	// name has no systemd filename suffix.
+	if layout.ServiceName != "docksight-agent" {
+		t.Errorf("service name is %q", layout.ServiceName)
+	}
+}
+
+// A relocated ProgramData must be honoured: a Windows machine is free to put
+// it elsewhere, and a localized one does.
+func TestWindowsLayoutHonoursEnvironment(t *testing.T) {
+
+	t.Setenv("ProgramData", `D:\State\`)
+
+	layout := WindowsLayout()
+
+	if layout.ConfigPath() != `D:\State\DockSight\agent\config.yaml` {
+		t.Errorf("config path is %q", layout.ConfigPath())
+	}
+}
+
+func TestDefaultLayoutMatchesHost(t *testing.T) {
+
+	layout := DefaultLayout()
+
+	if layout.Windows != (runtime.GOOS == "windows") {
+		t.Fatalf("layout.Windows is %v on %s", layout.Windows, runtime.GOOS)
 	}
 }

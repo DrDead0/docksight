@@ -11,7 +11,7 @@ const (
 	PhaseDownload  = "downloading the agent"
 	PhaseBinary    = "installing the binary"
 	PhaseConfigure = "creating the configuration"
-	PhaseService   = "creating the systemd service"
+	PhaseService   = "creating the service"
 	PhaseVerify    = "verifying the installation"
 )
 
