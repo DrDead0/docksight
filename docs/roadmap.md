@@ -113,7 +113,8 @@ Host CPU and memory are shipped (see **Completed → Monitoring**). What remains
 - Self-reported health beyond heartbeat
 - Plugin system for custom collectors
 - Resource limits for the agent process
-- Windows service support (the binary already builds; the installer does not)
+- Windows installer — the agent now runs as a Windows service and the binary is
+  published, but `docksight agent install` still refuses the platform
 
 ### Platform
 

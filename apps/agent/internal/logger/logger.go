@@ -6,16 +6,34 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
-var defaultLogger *slog.Logger = slog.Default()
+var (
+	defaultLogger *slog.Logger = slog.Default()
+
+	// output is where Printf writes. Tracked separately from the slog handler
+	// because Printf predates Setup taking a writer and used fmt.Printf, which
+	// goes to stdout unconditionally — under a Windows service there is no
+	// console, so the entire startup summary was written to a handle nobody
+	// could read.
+	output io.Writer = os.Stdout
+
+	// outputMu guards output. Setup runs during startup while nothing else is
+	// logging, but Printf is reachable from any goroutine afterwards.
+	outputMu sync.RWMutex
+)
 
 // Setup configures the package-level structured logger.
 func Setup(level string, out io.Writer) {
 	if out == nil {
 		out = os.Stdout
 	}
+
+	outputMu.Lock()
+	output = out
+	outputMu.Unlock()
 
 	opts := &slog.HandlerOptions{
 		Level: parseLevel(level),
@@ -69,7 +87,12 @@ func Fatal(msg string, args ...any) {
 	os.Exit(1)
 }
 
-// Printf writes a plain line to stdout (used for the human startup summary).
+// Printf writes a plain line to the configured output (used for the human
+// startup summary).
 func Printf(format string, args ...any) {
-	fmt.Printf(format, args...)
+	outputMu.RLock()
+	out := output
+	outputMu.RUnlock()
+
+	fmt.Fprintf(out, format, args...)
 }

@@ -96,17 +96,25 @@ done
 # Agent binaries
 #
 # The agent is its own Go module and runs on remote Docker hosts, so it is
-# built only for the platforms an agent can run on — no darwin, no windows.
+# built only for the platforms an agent can run beside a Docker Engine — no
+# darwin, where the engine lives inside a VM the agent cannot sit next to.
 # ---------------------------------------------------------------------------
 
-AGENT_TARGETS="linux/amd64 linux/arm64"
+AGENT_TARGETS="linux/amd64 linux/arm64 windows/amd64"
 
 for target in $AGENT_TARGETS; do
 
 	os="${target%/*}"
 	arch="${target#*/}"
 
-	binary="$OUT/docksight-agent-$VERSION-$os-$arch"
+	# Windows will not execute an extension-less file, and
+	# release.AgentBinaryName() already appends .exe via Target.Extension() —
+	# publishing without it makes discovery ask for a name the release does
+	# not carry.
+	ext=""
+	[ "$os" = "windows" ] && ext=".exe"
+
+	binary="$OUT/docksight-agent-$VERSION-$os-$arch$ext"
 
 	# Agent is its own module (docksight-agent), not the CLI module path.
 	GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -C "$AGENT_DIR" \

@@ -56,7 +56,10 @@ agent/vendor/
 *.tar.gz
 # Release artifacts — built by scripts/build-release.sh and uploaded to the
 # GitHub release. They are outputs, not sources: rebuildable from any tag.
-release/
+#
+# Anchored: unanchored "release/" also matches apps/cli/cmd/internal/release/,
+# so a new source file added to that package would be silently untracked.
+/release/
 
 # Docker
 *.pid

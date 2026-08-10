@@ -39,6 +39,7 @@ docksight-cli-$VERSION-darwin-arm64
 docksight-cli-$VERSION-windows-amd64.exe
 docksight-agent-$VERSION-linux-amd64
 docksight-agent-$VERSION-linux-arm64
+docksight-agent-$VERSION-windows-amd64.exe
 "
 
 # ---------------------------------------------------------------------------

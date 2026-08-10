@@ -32,6 +32,7 @@ agent/
     ├── lifecycle/
     ├── logger/
     ├── logs/            # Log stream service (subscribe/batch/decode)
+    ├── service/         # Windows Service Control Manager integration
     └── version/
 ```
 
@@ -42,6 +43,10 @@ docker compose up -d
 npm run dev:server
 cd agent && go run ./cmd/agent
 ```
+
+On Windows the same binary also runs as a Service Control Manager service; it
+detects which mode it is in at startup, so the command above is unchanged.
+See [Windows support](../../docs/agent.md#windows-support).
 
 ## Tests
 

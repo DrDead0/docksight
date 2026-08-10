@@ -122,6 +122,7 @@ func TestNamesRoundTripThroughSelectors(t *testing.T) {
 	rel := release(
 		PlatformBundleName("v0.1.0"),
 		CLIBinaryName("v0.1.0", target),
+		AgentBinaryName("v0.1.0", target),
 	)
 
 	if _, err := rel.PlatformBundle(); err != nil {
@@ -130,6 +131,47 @@ func TestNamesRoundTripThroughSelectors(t *testing.T) {
 
 	if _, err := rel.CLIBinary(target); err != nil {
 		t.Fatalf("published CLI name is not discoverable: %v", err)
+	}
+
+	if _, err := rel.AgentBinary(target); err != nil {
+		t.Fatalf("published agent name is not discoverable: %v", err)
+	}
+}
+
+// The agent is published for Windows as well as Linux. Discovery appends .exe
+// through Target.Extension(), so a release that published the agent without
+// the extension would be undiscoverable on the platform it was built for.
+func TestAgentBinaryNameForWindows(t *testing.T) {
+
+	target := Target{OS: "windows", Arch: "amd64"}
+
+	name := AgentBinaryName("v0.1.0", target)
+
+	if name != "docksight-agent-v0.1.0-windows-amd64.exe" {
+		t.Fatalf("got %q", name)
+	}
+
+	if _, err := release(name).AgentBinary(target); err != nil {
+		t.Fatalf("published Windows agent name is not discoverable: %v", err)
+	}
+}
+
+// A Windows host must never be served a Linux agent: the binary would not run.
+func TestAgentBinaryDoesNotCrossPlatforms(t *testing.T) {
+
+	rel := release(
+		"docksight-agent-v0.1.0-linux-amd64",
+		"docksight-agent-v0.1.0-windows-amd64.exe",
+	)
+
+	asset, err := rel.AgentBinary(Target{OS: "windows", Arch: "amd64"})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if asset.Name != "docksight-agent-v0.1.0-windows-amd64.exe" {
+		t.Fatalf("picked %q for windows/amd64", asset.Name)
 	}
 }
 

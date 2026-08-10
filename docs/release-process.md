@@ -13,7 +13,7 @@ commit and uploaded to one GitHub release.
 | CLI binary | `docksight-cli-<version>-<os>-<arch>` | Downloaded by the operator; self-installs |
 | Agent binary | `docksight-agent-<version>-<os>-<arch>` | `docksight agent install` |
 
-A complete release contains eight files:
+A complete release contains nine files:
 
 ```text
 docksight-platform-v0.0.13.tar.gz
@@ -24,9 +24,12 @@ docksight-cli-v0.0.13-darwin-arm64
 docksight-cli-v0.0.13-windows-amd64.exe
 docksight-agent-v0.0.13-linux-amd64
 docksight-agent-v0.0.13-linux-arm64
+docksight-agent-v0.0.13-windows-amd64.exe
 ```
 
-The agent is built only for Linux, because it is installed as a systemd service.
+The agent is built for Linux and Windows — the two platforms where it can run
+beside a Docker Engine. There is no darwin build: on macOS the engine lives
+inside a VM, so an agent on the host has nothing to sit next to.
 
 ### Strict separation
 
@@ -103,7 +106,7 @@ The script:
 3. Packs `bundle/` into `docksight-platform-v0.0.14.tar.gz`
 4. Cross-compiles the CLI for five targets, stamping the version, commit, and
    UTC build date with `-ldflags`
-5. Cross-compiles the agent for `linux/amd64` and `linux/arm64`
+5. Cross-compiles the agent for `linux/amd64`, `linux/arm64` and `windows/amd64`
 
 Output goes to `release/`, which is git-ignored — these are build outputs,
 rebuildable from any tag, and binaries do not belong in git history.
@@ -118,6 +121,7 @@ built docksight-cli-v0.0.14-darwin-arm64
 built docksight-cli-v0.0.14-windows-amd64.exe
 built docksight-agent-v0.0.14-linux-amd64
 built docksight-agent-v0.0.14-linux-arm64
+built docksight-agent-v0.0.14-windows-amd64.exe
 
 Upload every file above to the v0.0.14 GitHub release.
 ```
@@ -128,7 +132,7 @@ Build elsewhere with `DOCKSIGHT_RELEASE_DIR=/tmp/rel scripts/build-release.sh v0
 
 ## Publishing a release
 
-Pushing a tag runs `.github/workflows/release.yml`: it builds all eight
+Pushing a tag runs `.github/workflows/release.yml`: it builds all nine
 artifacts, uploads them, and verifies the release carries every one — no manual
 steps.
 
@@ -142,7 +146,7 @@ The same upload and verification can still be run by hand:
 scripts/publish-release.sh v0.0.14
 ```
 
-This uploads all eight artifacts **and then verifies against the GitHub API that
+This uploads all nine artifacts **and then verifies against the GitHub API that
 the release actually carries them**. That verification is the important part.
 
 !!! warning "The failure this prevents"
@@ -185,8 +189,8 @@ graph LR
 2. **Tag**: `git tag v0.0.14 && git push origin v0.0.14`
 3. **Build & publish** happen automatically: the tag-push workflow runs
    `build-release.sh`, uploads `release/*` to the release, and fails the run if
-   any of the eight assets is missing
-4. **Verify** the release is not a draft and lists eight assets:
+   any of the nine assets is missing
+4. **Verify** the release is not a draft and lists nine assets:
    ```bash
    curl -s https://api.github.com/repos/Open-Source-Kigali/docksight/releases/latest \
      | grep '"name": "docksight'
@@ -227,7 +231,7 @@ remove that alias without checking which releases users may still pin to.
 ## Automation
 
 A GitHub Actions workflow (`.github/workflows/release.yml`) triggers on tag
-push: it runs `build-release.sh` and `publish-release.sh`, so the eight
+push: it runs `build-release.sh` and `publish-release.sh`, so the nine
 artifacts are built, uploaded, and verified with zero manual steps. A missing
 artifact fails the workflow instead of publishing an incomplete release.
 
