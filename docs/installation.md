@@ -15,12 +15,17 @@ re-running an install is the supported way to upgrade.
 
 | Requirement | Detail |
 | --- | --- |
-| Operating system | Linux (x86-64 or ARM64) |
-| Docker Engine | Installed and running |
+| Operating system | Linux or Windows (x86-64 or ARM64) |
+| Docker Engine | Installed and running, in **Linux-container mode** |
 | Docker Compose | v2 plugin (`docker compose`, not `docker-compose`) |
-| Privileges | root, or `sudo` |
+| Privileges | root or `sudo` on Linux; an Administrator prompt on Windows |
 | Network | Outbound HTTPS to `api.github.com` and `ghcr.io`; inbound on the dashboard port (default `2002`) |
 | Disk | ~2 GB for images and volumes |
+
+!!! warning "On Windows the platform does not survive an unattended reboot"
+    The engine is Docker Desktop's, and it starts with the Docker Desktop
+    application in a user session. After a reboot the platform stays down until
+    somebody signs in. See [Windows](#windows) below.
 
 ### Agent host
 
@@ -32,12 +37,9 @@ re-running an install is the supported way to upgrade.
 | Privileges | root or `sudo` on Linux; an Administrator prompt on Windows |
 | Network | Outbound to the platform URL. **No inbound ports required.** |
 
-!!! warning "The platform installs on Linux only"
-    `docksight install` rejects non-Linux hosts at validation:
-    `DockSight installs on Linux only, this host runs windows`. The **agent**
-    installs on Windows as well — see
-    [Windows support](agent.md#windows-support). macOS is not supported for
-    either.
+!!! warning "macOS is not supported"
+    Both installers reject it at validation:
+    `DockSight installs on linux and windows, this host runs darwin`.
 
 The installer verifies all of this before writing anything. If a requirement is
 missing it stops at validation, leaving the host untouched.
@@ -139,6 +141,69 @@ http://<your-server>:2002
     `docksight` directly. This works because the installer replaces the binary
     by renaming a new file over it, so the running process is undisturbed —
     see [Platform](platform.md#self-installation).
+
+### Windows
+
+The platform runs the same five Linux containers on Windows. Nothing is ported;
+the images are unchanged, and the Engine that runs them is Docker Desktop in
+Linux-container mode.
+
+```powershell
+# From an Administrator PowerShell
+.\docksight.exe install
+```
+
+Preflight adds two checks Linux does not have. **Linux container mode**, because
+an Engine switched to Windows containers cannot run any of the five images and
+fails with a manifest error that never mentions the mode. And **Administrator
+rights**, checked before anything is downloaded, because the install writes
+outside the user's own directories.
+
+#### What was installed
+
+| Path | Contents |
+| --- | --- |
+| `C:\Program Files\DockSight\docksight.exe` | The CLI itself |
+| `C:\ProgramData\DockSight\platform\` | Compose file, nginx config, `VERSION`, `.env`, `state.json` |
+| `C:\ProgramData\DockSight\data\` | Runtime data that survives reinstalls |
+
+`ProgramFiles` and `ProgramData` are read from the environment, so a machine
+that keeps them elsewhere is honoured.
+
+Two machine-wide changes are made as well, both idempotent:
+
+- `C:\Program Files\DockSight` is added to the **machine PATH** under `HKLM`,
+  and a `WM_SETTINGCHANGE` broadcast tells Explorer to re-read it. Open a new
+  terminal for `docksight` to resolve.
+- An inbound **Windows Firewall** rule named *DockSight Platform* opens TCP 2002
+  on the domain and private profiles. Without it the dashboard answers on this
+  machine and agents elsewhere cannot connect — a failure that looks nothing
+  like a closed port.
+
+#### Credentials on Windows
+
+`.env` holds `POSTGRES_PASSWORD` and `JWT_SECRET`. Windows ignores the `0600`
+mode Go asks for, so the file would otherwise inherit the ACL of its parent
+under `ProgramData` — which grants ordinary users read, and on many machines
+write. The installer replaces that with an explicit, non-inherited ACL granting
+only `BUILTIN\Administrators` and `NT AUTHORITY\SYSTEM`. It is reapplied on
+every install, so an installation made before this existed is repaired by
+re-running it.
+
+```powershell
+icacls 'C:\ProgramData\DockSight\platform\.env'
+```
+
+#### Reboots
+
+**The platform does not come back on its own.** Docker Desktop's engine starts
+with its desktop application in a user session, so a host sitting at a sign-in
+screen has no engine and nothing to restart the containers. `docksight install`
+says so when it finishes rather than leaving it to be discovered during an
+outage.
+
+Enable *Start Docker Desktop when you sign in* and sign in after a reboot, or
+run the platform on a Linux host if unattended restarts matter.
 
 ---
 

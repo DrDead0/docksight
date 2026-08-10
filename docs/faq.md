@@ -59,32 +59,71 @@ uname -m     # x86_64 → -linux-amd64,  aarch64 → -linux-arm64
 
 ### Can I install DockSight on Windows or macOS?
 
-The **agent** installs on Windows. The **platform** does not, on either.
+**Windows, yes** — both the agent and the platform. **macOS, no.**
 
-`docksight agent install` works end to end on Windows: it registers the agent
-with the Service Control Manager, writes its configuration under
-`C:\ProgramData\DockSight\agent`, and verifies the connection by reading the
-agent's log. See [Windows support](agent.md#windows-support) for the paths, the
-elevation requirement and what differs from systemd.
+`docksight agent install` registers the agent with the Service Control Manager.
+See [Windows support](agent.md#windows-support).
 
-The platform installer still rejects anything but Linux during validation:
+`docksight install` runs the platform's five Linux containers on a Docker
+Engine in Linux-container mode, which on Windows means **Docker Desktop**. Both
+commands need an Administrator prompt. See
+[Windows platform install](installation.md#windows) for what it configures and
+the one thing it cannot do.
 
-```text
-✗ system validation failed: DockSight installs on Linux only, this host runs windows
-```
+macOS is not supported for either: the release publishes a macOS **CLI** build,
+but it can only run `version` and `--help`.
 
-It brings up a Compose stack against Linux filesystem paths, which has no
-Windows equivalent yet. macOS is not supported for either: the release publishes
-a macOS **CLI** build, but it can only run `version` and `--help`.
+### Does the platform come back after a Windows reboot?
 
-### `this process is not elevated, and registering a Windows service needs Administrator rights`
+**Not on its own.** This is the one real limitation of running the platform on
+Windows, and it is worth understanding before you choose that host.
 
-Registering a service writes to the Service Control Manager, which needs
-Administrator. Start an elevated PowerShell — right-click *Windows PowerShell* →
-*Run as administrator* — and run the install again.
+Docker Desktop's engine runs in a VM started by the Docker Desktop
+*application*, in a user session. A Windows host that reboots to a sign-in
+screen has no engine — so the containers, all of which are
+`restart: unless-stopped`, have nothing to restart them. The platform stays down
+until somebody signs in.
+
+To reduce the window, enable **Docker Desktop → Settings → General → "Start
+Docker Desktop when you sign in"** and configure the machine to sign in
+automatically. There is no arrangement that makes the platform survive a reboot
+with nobody signed in.
+
+**A monitoring platform that is offline exactly when the machine has just
+rebooted is the worst time for it to be offline.** If unattended restarts
+matter, run the platform on a Linux host — the agent still installs on all your
+Windows machines and reports to it.
+
+### Do I need Docker Desktop on Windows?
+
+For the **platform**, yes. It needs a Docker Engine in Linux-container mode,
+and Docker Desktop is how you get one on Windows. Note that Docker Desktop
+requires a paid subscription for larger organisations.
+
+For the **agent**, no. The agent talks to whatever Engine is on the host over
+the `\\.\pipe\docker_engine` named pipe, and only monitors it.
+
+### `this process is not elevated, and installing DockSight on Windows needs Administrator rights`
+
+Both installers make machine-wide changes. The agent registers a Service Control
+Manager service; the platform writes to `C:\Program Files`, adds a machine PATH
+entry and opens a firewall port. None of that is permitted to an ordinary user.
+
+Start an elevated PowerShell — right-click *Windows PowerShell* → *Run as
+administrator* — and run the command again.
 
 The check runs during validation, before anything is downloaded or written, so a
 failure here leaves the host untouched.
+
+### `Docker is running windows containers, and the DockSight platform is built from Linux images`
+
+A Docker Engine on Windows runs either Linux or Windows containers, never both
+at once, and the platform's images — `postgres:17-alpine` among them — are Linux
+images. Right-click the Docker Desktop tray icon and choose **Switch to Linux
+containers**, then run the install again.
+
+Without this check the daemon would reject the images with a manifest error that
+never mentions the mode being wrong.
 
 ### Do I need to install the platform before the agents?
 

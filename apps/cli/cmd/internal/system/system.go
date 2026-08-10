@@ -78,15 +78,21 @@ func ValidateAll(ctx context.Context, reporter progress.Reporter, requirements [
 
 // PlatformRequirements is what `docksight install` needs: a supported host
 // with a working Docker Engine and Compose.
+//
+// The platform is the same five Linux container images on every host, so the
+// bulk of this list is the same everywhere and only the tail is
+// platform-specific — see platformExtraRequirements.
 func PlatformRequirements() []Requirement {
 
-	return []Requirement{
+	requirements := []Requirement{
 		{Name: "Checking operating system", Check: func(context.Context) error { return CheckOS() }},
 		{Name: "Checking architecture", Check: func(context.Context) error { return CheckArchitecture() }},
 		{Name: "Checking Docker Engine", Check: CheckDockerInstalled},
 		{Name: "Checking Docker daemon", Check: CheckDockerRunning},
 		{Name: "Checking Docker Compose", Check: CheckDockerCompose},
 	}
+
+	return append(requirements, platformExtraRequirements()...)
 }
 
 // AgentRequirements is what `docksight agent install` needs. The agent is
@@ -101,7 +107,7 @@ func PlatformRequirements() []Requirement {
 func AgentRequirements() []Requirement {
 
 	requirements := []Requirement{
-		{Name: "Checking operating system", Check: func(context.Context) error { return CheckAgentOS() }},
+		{Name: "Checking operating system", Check: func(context.Context) error { return CheckOS() }},
 		{Name: "Checking architecture", Check: func(context.Context) error { return CheckArchitecture() }},
 		{Name: "Checking Docker Engine", Check: CheckDockerInstalled},
 		{Name: "Checking Docker daemon", Check: CheckDockerRunning},

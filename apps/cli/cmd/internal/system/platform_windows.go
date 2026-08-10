@@ -9,6 +9,26 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// platformExtraRequirements is what `docksight install` needs beyond Docker
+// on Windows.
+//
+// Container mode is checked because an Engine set to Windows containers
+// cannot run any of the five images, and fails with a manifest error that
+// never mentions the mode. Elevation is checked because the install writes to
+// Program Files, adds a machine PATH entry under HKLM and opens a firewall
+// port — none of which an ordinary user may do, and all of which happen after
+// the download, where a raw "Access is denied." explains nothing.
+func platformExtraRequirements() []Requirement {
+
+	return []Requirement{
+		{Name: "Checking Linux container mode", Check: CheckDockerLinuxContainers},
+		{
+			Name:  "Checking Administrator rights",
+			Check: func(context.Context) error { return CheckElevation() },
+		},
+	}
+}
+
 // agentServiceRequirements is what supervising the agent needs on Windows.
 //
 // systemd has no counterpart here, so neither does the check for it. Two
@@ -64,8 +84,12 @@ func CheckElevation() error {
 		return nil
 	}
 
+	// Deliberately not specific about which privileged operation is coming.
+	// Both installers use this: the agent registers a service, the platform
+	// writes to Program Files, adds a machine PATH entry and opens a firewall
+	// port. Naming one of them would be wrong half the time.
 	return &NotElevatedError{
-		Reason: "this process is not elevated, and registering a Windows service needs Administrator rights",
+		Reason: "this process is not elevated, and installing DockSight on Windows needs Administrator rights",
 	}
 }
 

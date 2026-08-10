@@ -191,28 +191,6 @@ func TestCheckOS(t *testing.T) {
 
 	err := CheckOS()
 
-	if runtime.GOOS == "linux" && err != nil {
-		t.Fatalf("linux rejected: %v", err)
-	}
-
-	if runtime.GOOS != "linux" {
-
-		if err == nil {
-			t.Fatal("a non-linux host was accepted")
-		}
-
-		if !strings.Contains(err.Error(), runtime.GOOS) {
-			t.Fatalf("error does not name the OS: %v", err)
-		}
-	}
-}
-
-// The agent gate is wider than the platform gate: it has an implementation
-// for the Windows service manager, and the platform stack does not.
-func TestCheckAgentOS(t *testing.T) {
-
-	err := CheckAgentOS()
-
 	switch runtime.GOOS {
 
 	case "linux", "windows":
@@ -229,6 +207,36 @@ func TestCheckAgentOS(t *testing.T) {
 
 		if !strings.Contains(err.Error(), runtime.GOOS) {
 			t.Fatalf("error does not name the OS: %v", err)
+		}
+	}
+}
+
+// Windows needs two checks Linux does not, and both exist to turn a failure
+// that happens late and opaquely into one that happens first and says what
+// to do.
+func TestPlatformRequirementsOnWindows(t *testing.T) {
+
+	if runtime.GOOS != "windows" {
+
+		if len(platformExtraRequirements()) != 0 {
+			t.Fatal("a non-Windows host contributed Windows-only platform checks")
+		}
+
+		return
+	}
+
+	names := make([]string, 0)
+
+	for _, requirement := range PlatformRequirements() {
+		names = append(names, strings.ToLower(requirement.Name))
+	}
+
+	joined := strings.Join(names, "|")
+
+	for _, required := range []string{"linux container", "administrator"} {
+
+		if !strings.Contains(joined, required) {
+			t.Errorf("platform requirements do not check %q: %v", required, names)
 		}
 	}
 }
