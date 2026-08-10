@@ -59,20 +59,32 @@ uname -m     # x86_64 → -linux-amd64,  aarch64 → -linux-arm64
 
 ### Can I install DockSight on Windows or macOS?
 
-No. Both installers reject non-Linux hosts during validation:
+The **agent** installs on Windows. The **platform** does not, on either.
+
+`docksight agent install` works end to end on Windows: it registers the agent
+with the Service Control Manager, writes its configuration under
+`C:\ProgramData\DockSight\agent`, and verifies the connection by reading the
+agent's log. See [Windows support](agent.md#windows-support) for the paths, the
+elevation requirement and what differs from systemd.
+
+The platform installer still rejects anything but Linux during validation:
 
 ```text
 ✗ system validation failed: DockSight installs on Linux only, this host runs windows
 ```
 
-The platform uses Linux filesystem paths, and the installer registers a systemd
-service, which Windows and macOS do not have. The release does publish Windows
-and macOS **CLI** builds, but they can only run `version` and `--help`.
+It brings up a Compose stack against Linux filesystem paths, which has no
+Windows equivalent yet. macOS is not supported for either: the release publishes
+a macOS **CLI** build, but it can only run `version` and `--help`.
 
-The Windows **agent** is further along: it is published as
-`docksight-agent-<version>-windows-amd64.exe` and runs as a proper Windows
-service, so it can be registered by hand today. Only the installer is missing —
-see [Windows support](agent.md#windows-support).
+### `this process is not elevated, and registering a Windows service needs Administrator rights`
+
+Registering a service writes to the Service Control Manager, which needs
+Administrator. Start an elevated PowerShell — right-click *Windows PowerShell* →
+*Run as administrator* — and run the install again.
+
+The check runs during validation, before anything is downloaded or written, so a
+failure here leaves the host untouched.
 
 ### Do I need to install the platform before the agents?
 
@@ -93,8 +105,8 @@ user cannot reach its socket. Use `sudo`.
 
 ### `systemd is not the init system on this host`
 
-The agent is a systemd service, so systemd must be PID 1. Common causes: you are
-inside a container, or in WSL without systemd. For WSL:
+On Linux the agent is a systemd service, so systemd must be PID 1. Common
+causes: you are inside a container, or in WSL without systemd. For WSL:
 
 ```ini title="/etc/wsl.conf"
 [boot]
@@ -102,6 +114,9 @@ systemd=true
 ```
 
 Then `wsl --shutdown` and reopen.
+
+This check does not run on Windows, where the Service Control Manager takes
+systemd's place.
 
 ### Can I install without internet access?
 

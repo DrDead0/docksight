@@ -301,12 +301,65 @@ everything.
 On Linux none of this applies: the agent writes to stdout and systemd captures
 it into the journal, which already provides rotation and retention.
 
-### Not yet done
+### Installing
 
-`docksight agent install` still refuses to run on Windows, so the service must
-currently be registered by hand. That work is tracked separately — see the
-[Roadmap](roadmap.md#agent) and the
-[FAQ](faq.md#can-i-install-docksight-on-windows-or-macos).
+`docksight agent install` works on Windows exactly as it does on Linux, from an
+**Administrator** PowerShell:
+
+```powershell
+.\docksight-cli.exe agent install --url https://platform.example.com
+Get-Service docksight-agent
+```
+
+Running it again upgrades in place: the binary is replaced, the configuration is
+rewritten with whatever `--url` now says, and the service is updated rather than
+deleted and recreated — so its recovery actions and Event Log registration
+survive. `identity.json` is never touched, on either platform.
+
+Elevation is checked during validation, before anything is downloaded or
+written. An unelevated run stops with
+`this process is not elevated, and registering a Windows service needs
+Administrator rights` and leaves the host untouched.
+
+### Where things go
+
+| | Linux | Windows |
+| --- | --- | --- |
+| Binary | `/usr/local/bin/docksight-agent` | `C:\Program Files\DockSight\docksight-agent.exe` |
+| Configuration | `/etc/docksight-agent` | `C:\ProgramData\DockSight\agent` |
+| Service name | `docksight-agent.service` | `docksight-agent` |
+| Docker endpoint | `/var/run/docker.sock` | `\\.\pipe\docker_engine` |
+| Service definition | `/etc/systemd/system/docksight-agent.service` | `HKLM\SYSTEM\CurrentControlSet\Services\docksight-agent` |
+
+`ProgramFiles` and `ProgramData` are read from the environment, so a machine
+that keeps them elsewhere is honoured.
+
+### What has no systemd equivalent
+
+The installer is written against one service-manager interface with two
+implementations, and three parts of it map onto Windows only loosely:
+
+- **There is no unit file.** Service configuration lives in the SCM, not on
+  disk. What the installer renders for Windows is the command line the SCM
+  stores and runs, which is the whole of what a service definition is there.
+  `Restart=always` and `RestartSec=5s` become failure actions — restart, five
+  seconds apart, repeating — with *enable actions for stops with errors* set, so
+  an agent that exits on a bad configuration is retried rather than left
+  stopped.
+- **There is no daemon-reload.** systemd caches unit files and needs telling
+  when they change; the SCM database was written directly and has nothing to
+  reload. The call is a no-op on Windows.
+- **There is no restart counter.** systemd exposes `NRestarts`. Windows counts
+  failures only to decide which recovery action to run next, and exposes no
+  equivalent. Verification instead watches the service's process ID across the
+  two liveness checks it already makes — one before the settle window and one
+  after — and treats a changed process ID as a restart. That catches the case
+  the counter exists for: an agent that comes up, dies, and is restarted while
+  the installer is still watching.
+
+Verification reads `C:\ProgramData\DockSight\logs\agent.log` where it would read
+the journal on Linux. The markers it looks for are the agent's own log strings
+and are identical on both platforms.
 
 ---
 

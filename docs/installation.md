@@ -26,16 +26,18 @@ re-running an install is the supported way to upgrade.
 
 | Requirement | Detail |
 | --- | --- |
-| Operating system | Linux (x86-64 or ARM64) |
+| Operating system | Linux or Windows (x86-64 or ARM64) |
 | Docker Engine | Installed and running |
-| Init system | systemd as PID 1 |
-| Privileges | root, or `sudo` |
+| Service manager | systemd as PID 1 on Linux; the Service Control Manager on Windows |
+| Privileges | root or `sudo` on Linux; an Administrator prompt on Windows |
 | Network | Outbound to the platform URL. **No inbound ports required.** |
 
-!!! warning "Windows and macOS are not supported for installation"
-    Both installers reject non-Linux hosts at validation:
-    `DockSight installs on Linux only, this host runs windows`.
-    See the [FAQ](faq.md#can-i-install-docksight-on-windows-or-macos).
+!!! warning "The platform installs on Linux only"
+    `docksight install` rejects non-Linux hosts at validation:
+    `DockSight installs on Linux only, this host runs windows`. The **agent**
+    installs on Windows as well — see
+    [Windows support](agent.md#windows-support). macOS is not supported for
+    either.
 
 The installer verifies all of this before writing anything. If a requirement is
 missing it stops at validation, leaving the host untouched.

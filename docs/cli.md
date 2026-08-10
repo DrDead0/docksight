@@ -43,8 +43,8 @@ $ sudo docksight agent status
 **Error output** — failures print once, prefixed with `✗`, without a usage dump:
 
 ```console
-$ sudo docksight agent install --url http://platform:2002
-✗ system validation failed: DockSight installs on Linux only, this host runs windows
+$ docksight agent install --url http://platform:2002
+✗ system validation failed: the Docker daemon is not running: Cannot connect to the Docker daemon
 ```
 
 A *usage* mistake still shows the flag reference:
