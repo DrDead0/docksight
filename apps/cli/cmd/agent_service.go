@@ -3,33 +3,48 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/agent/install"
-	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/systemd"
+	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/system"
 	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/ui"
 
 	"github.com/spf13/cobra"
 )
 
-// How long to wait for systemd to report the unit active after start/restart.
-// systemctl start returning 0 only means the request was accepted.
+// How long to wait for the service manager to report the unit active after
+// start/restart. `systemctl start` returning 0, like the SCM accepting a start
+// request, only means the request was accepted.
 const agentServiceSettle = 5 * time.Second
 const agentServicePoll = time.Second
 
 const agentServiceRootHint = "this command must be run as root — try `sudo docksight agent %s`"
 
-func agentUnitName() string {
-	return install.DefaultLayout().ServiceName
+const agentServiceAdministratorHint = "this command must be run as Administrator — " +
+	"run `docksight agent %s` from an Administrator prompt"
+
+func agentLayout() install.Layout {
+	return install.DefaultLayout()
 }
 
-func requireRoot(command string) error {
-	if os.Geteuid() == 0 {
+// agentServiceElevationHint is the format string for a command that was run
+// without the rights it needs. The wording is the host's, not DockSight's:
+// "sudo" means nothing on Windows and neither does an Administrator prompt on
+// Linux.
+func agentServiceElevationHint() string {
+	if runtime.GOOS == "windows" {
+		return agentServiceAdministratorHint
+	}
+	return agentServiceRootHint
+}
+
+func requireElevation(command string) error {
+	if err := system.CheckElevation(); err == nil {
 		return nil
 	}
-	return fmt.Errorf(agentServiceRootHint, command)
+	return fmt.Errorf(agentServiceElevationHint(), command)
 }
 
 func isPermissionError(err error) bool {
@@ -39,6 +54,7 @@ func isPermissionError(err error) bool {
 	message := strings.ToLower(err.Error())
 	return strings.Contains(message, "permission denied") ||
 		strings.Contains(message, "access denied") ||
+		strings.Contains(message, "access is denied") ||
 		strings.Contains(message, "interactive authentication required")
 }
 
@@ -47,13 +63,13 @@ func wrapAgentServiceError(command string, err error) error {
 		return nil
 	}
 	if isPermissionError(err) {
-		return fmt.Errorf(agentServiceRootHint, command)
+		return fmt.Errorf(agentServiceElevationHint(), command)
 	}
 	return err
 }
 
 // waitActive polls until the unit reports active or the settle window passes.
-func waitActive(ctx context.Context, manager *systemd.Manager, unit string) (bool, error) {
+func waitActive(ctx context.Context, manager install.UnitController, unit string) (bool, error) {
 	deadline := time.Now().Add(agentServiceSettle)
 
 	for {
@@ -81,12 +97,13 @@ var agentStartCMD = &cobra.Command{
 	Use:   "start",
 	Short: "Start the agent service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := requireRoot("start"); err != nil {
+		if err := requireElevation("start"); err != nil {
 			return err
 		}
 
-		unit := agentUnitName()
-		manager := systemd.NewManager()
+		layout := agentLayout()
+		unit := layout.ServiceName
+		manager := install.NewController(layout)
 		ui.Info("Starting " + unit)
 
 		if err := wrapAgentServiceError("start", manager.Start(cmd.Context(), unit)); err != nil {
@@ -99,9 +116,9 @@ var agentStartCMD = &cobra.Command{
 		}
 		if !active {
 			return fmt.Errorf(
-				"%s did not become active — inspect with: journalctl -u %s -n 50",
+				"%s did not become active — inspect with: %s",
 				unit,
-				unit,
+				layout.LogsCommand(),
 			)
 		}
 
@@ -114,12 +131,13 @@ var agentStopCMD = &cobra.Command{
 	Use:   "stop",
 	Short: "Stop the agent service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := requireRoot("stop"); err != nil {
+		if err := requireElevation("stop"); err != nil {
 			return err
 		}
 
-		unit := agentUnitName()
-		manager := systemd.NewManager()
+		layout := agentLayout()
+		unit := layout.ServiceName
+		manager := install.NewController(layout)
 		ui.Info("Stopping " + unit)
 
 		if err := wrapAgentServiceError("stop", manager.Stop(cmd.Context(), unit)); err != nil {
@@ -135,12 +153,13 @@ var agentRestartCMD = &cobra.Command{
 	Use:   "restart",
 	Short: "Restart the agent service",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := requireRoot("restart"); err != nil {
+		if err := requireElevation("restart"); err != nil {
 			return err
 		}
 
-		unit := agentUnitName()
-		manager := systemd.NewManager()
+		layout := agentLayout()
+		unit := layout.ServiceName
+		manager := install.NewController(layout)
 		ui.Info("Restarting " + unit)
 
 		if err := wrapAgentServiceError("restart", manager.Restart(cmd.Context(), unit)); err != nil {
@@ -153,9 +172,9 @@ var agentRestartCMD = &cobra.Command{
 		}
 		if !active {
 			return fmt.Errorf(
-				"%s did not become active after restart — inspect with: journalctl -u %s -n 50",
+				"%s did not become active after restart — inspect with: %s",
 				unit,
-				unit,
+				layout.LogsCommand(),
 			)
 		}
 

@@ -16,12 +16,14 @@ import (
 	"github.com/Open-Source-Kigali/docksight/apps/cli/cmd/internal/release"
 )
 
-// fakeUnits stands in for systemd.
+// fakeUnits stands in for the host's service manager.
 type fakeUnits struct {
 	unitDir  string
 	written  map[string]string
 	reloaded int
 	enabled  []string
+	started  []string
+	stopped  []string
 	restarts []string
 
 	active      bool
@@ -63,6 +65,16 @@ func (f *fakeUnits) DaemonReload(context.Context) error { f.reloaded++; return n
 
 func (f *fakeUnits) Enable(_ context.Context, unit string) error {
 	f.enabled = append(f.enabled, unit)
+	return nil
+}
+
+func (f *fakeUnits) Start(_ context.Context, unit string) error {
+	f.started = append(f.started, unit)
+	return nil
+}
+
+func (f *fakeUnits) Stop(_ context.Context, unit string) error {
+	f.stopped = append(f.stopped, unit)
 	return nil
 }
 
@@ -226,28 +238,33 @@ func TestInstall(t *testing.T) {
 		t.Errorf("config does not carry the platform URL:\n%s", string(config))
 	}
 
-	// Phase 5 — the service is created, enabled and started.
+	// Phase 5 — the service is created, enabled and started. What a service
+	// definition contains is platform-specific; that it names the binary and
+	// the config is not.
 	unit := units.written[installer.Layout.ServiceName]
 
 	if unit == "" {
-		t.Fatal("no unit file written")
+		t.Fatal("no service definition written")
 	}
 
-	for _, required := range []string{
-		"Restart=always",
-		"After=docker.service",
-		"network.target",
+	required := []string{
 		installer.Layout.BinaryPath,
 		installer.Layout.ConfigPath(),
-	} {
+	}
 
-		if !strings.Contains(unit, required) {
-			t.Errorf("unit is missing %q:\n%s", required, unit)
+	if !installer.Layout.Windows {
+		required = append(required, "Restart=always", "After=docker.service", "network.target")
+	}
+
+	for _, fragment := range required {
+
+		if !strings.Contains(unit, fragment) {
+			t.Errorf("service definition is missing %q:\n%s", fragment, unit)
 		}
 	}
 
 	if units.reloaded == 0 {
-		t.Error("systemd was not reloaded")
+		t.Error("the service manager was not reloaded")
 	}
 
 	if len(units.enabled) != 1 {
@@ -412,7 +429,9 @@ func TestInstallDetectsDeadService(t *testing.T) {
 		t.Fatal("a dead service was reported as a success")
 	}
 
-	if !strings.Contains(err.Error(), "journalctl") {
+	// The next step is the host's own way of reading the agent's output:
+	// journalctl on Linux, the log file under ProgramData on Windows.
+	if !strings.Contains(err.Error(), installer.Layout.LogsCommand()) {
 		t.Errorf("diagnostic gives no next step:\n%v", err)
 	}
 }

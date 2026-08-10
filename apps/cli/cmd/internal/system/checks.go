@@ -20,7 +20,28 @@ var supportedArchitectures = []string{"amd64", "arm64"}
 // releases. Checking anything else would prove the wrong thing.
 const connectivityProbe = "https://api.github.com"
 
-// CheckOS reports whether this is a supported operating system.
+// agentOperatingSystems are the hosts the agent installs on. The platform is
+// not in this list: it is a Compose stack that still assumes Linux paths.
+var agentOperatingSystems = []string{"linux", "windows"}
+
+// NotElevatedError reports that this process lacks the privileges to install
+// a service.
+//
+// It is a distinct type so a caller can recognise the one validation failure
+// that ElevationHint answers, without matching on the message. Every other
+// failed check needs a different fix — a Docker daemon that is down is not
+// started by running as root.
+type NotElevatedError struct {
+	// Reason says what is missing, in the host's own terms.
+	Reason string
+}
+
+func (e *NotElevatedError) Error() string {
+	return e.Reason
+}
+
+// CheckOS reports whether this is a supported operating system for the
+// platform install.
 func CheckOS() error {
 
 	if runtime.GOOS != "linux" {
@@ -31,6 +52,28 @@ func CheckOS() error {
 	}
 
 	return nil
+}
+
+// CheckAgentOS reports whether the agent installs on this operating system.
+//
+// This gate is wider than CheckOS on purpose. The agent is a single binary
+// supervised by whatever service manager the host already runs — systemd on
+// Linux, the Service Control Manager on Windows — so the only thing it needs
+// from the OS is one it has an implementation for.
+func CheckAgentOS() error {
+
+	for _, supported := range agentOperatingSystems {
+
+		if runtime.GOOS == supported {
+			return nil
+		}
+	}
+
+	return fmt.Errorf(
+		"the DockSight Agent installs on %s only, this host runs %s",
+		strings.Join(agentOperatingSystems, " and "),
+		runtime.GOOS,
+	)
 }
 
 // CheckArchitecture reports whether builds exist for this CPU.
@@ -102,6 +145,9 @@ func CheckDockerCompose(ctx context.Context) error {
 // CheckSystemd reports whether systemd is the init system. The presence of
 // systemctl is not enough: it is installed inside containers and on hosts
 // running a different init, where enabling a unit silently does nothing.
+//
+// Nothing calls this on Windows — see agent_windows.go for what takes its
+// place there.
 func CheckSystemd() error {
 
 	if _, err := exec.LookPath("systemctl"); err != nil {

@@ -19,7 +19,8 @@ var agentInstallCMD = &cobra.Command{
 	Use:   "install",
 	Short: "Install the DockSight Agent on this host",
 	Long: "Download the agent, configure it against a DockSight platform, " +
-		"register it as a systemd service and verify that it connects.",
+		"register it with the host's service manager — systemd on Linux, the " +
+		"Service Control Manager on Windows — and verify that it connects.",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 

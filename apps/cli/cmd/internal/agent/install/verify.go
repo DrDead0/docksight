@@ -40,10 +40,16 @@ var (
 
 // Health is the outcome of verifying an installation.
 type Health struct {
-	// Active is whether systemd reports the service as running.
+	// Active is whether the service manager reports the service as running.
 	Active bool
 
-	// Restarts is how many times systemd has had to restart it.
+	// Restarts is how many times the service manager has had to restart it.
+	//
+	// systemd answers this from its own NRestarts counter. Windows keeps no
+	// equivalent, and the SCM controller answers instead from the process ID
+	// it sees change across the two liveness checks below. Both are read the
+	// same way here: any restart at all inside the settle window means the
+	// agent is not staying up.
 	Restarts int
 
 	// Connected is whether the agent reported reaching the platform.
@@ -52,16 +58,19 @@ type Health struct {
 	// Detail is the log line that decided Connected, when there is one.
 	Detail string
 
-	// Logs is the recent journal output, for diagnostics.
+	// Logs is the recent service output, for diagnostics.
 	Logs string
 }
 
 // verify waits for the service to settle and reports what it observes.
 //
-// A service can be "active" and still be broken: systemd restarts it, it
-// dies again, and the loop repeats. Verification therefore checks liveness
-// twice with a wait in between, and reads the journal to find out whether the
-// agent actually reached the platform.
+// A service can be "active" and still be broken: the service manager restarts
+// it, it dies again, and the loop repeats. Verification therefore checks
+// liveness twice with a wait in between, and reads the agent's own output to
+// find out whether it actually reached the platform. Where that output comes
+// from is the controller's business — the journal on Linux, the log file
+// under ProgramData on Windows — and the markers matched against it are the
+// agent's own message strings, which are the same on both.
 func (i *Installer) verify(ctx context.Context) (*Health, error) {
 
 	unit := i.Layout.ServiceName
@@ -80,7 +89,7 @@ func (i *Installer) verify(ctx context.Context) (*Health, error) {
 		return health, &PhaseError{
 			Phase: PhaseVerify,
 			Err:   fmt.Errorf("%s is not running", unit),
-			Hint:  "Inspect the service with: journalctl -u " + unit + " -n 50",
+			Hint:  "Inspect the service with: " + i.Layout.LogsCommand(),
 			Logs:  health.Logs,
 		}
 	}
