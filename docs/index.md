@@ -43,9 +43,9 @@ Every dotted line is initiated **by the agent**. Hosts behind NAT, in another cl
 === "Platform (central server)"
 
     ```bash
-    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
-    chmod +x docksight-cli-v0.0.13-linux-amd64
-    sudo ./docksight-cli-v0.0.13-linux-amd64 install
+    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.1-linux-amd64
+    chmod +x docksight-cli-v0.0.1-linux-amd64
+    sudo ./docksight-cli-v0.0.1-linux-amd64 install
     ```
 
     Installs the CLI to `/usr/local/bin/docksight`, unpacks the platform into
@@ -55,9 +55,9 @@ Every dotted line is initiated **by the agent**. Hosts behind NAT, in another cl
 === "Agent (each Docker host)"
 
     ```bash
-    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
-    chmod +x docksight-cli-v0.0.13-linux-amd64
-    sudo ./docksight-cli-v0.0.13-linux-amd64 agent install --url https://platform.example.com
+    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.1-linux-amd64
+    chmod +x docksight-cli-v0.0.1-linux-amd64
+    sudo ./docksight-cli-v0.0.1-linux-amd64 agent install --url https://platform.example.com
     ```
 
     Installs the agent, writes `/etc/docksight-agent/config.yaml`, registers a

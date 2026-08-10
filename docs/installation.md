@@ -51,8 +51,8 @@ missing it stops at validation, leaving the host untouched.
 ### 1. Download the CLI
 
 ```bash
-curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
-chmod +x docksight-cli-v0.0.13-linux-amd64
+curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.1-linux-amd64
+chmod +x docksight-cli-v0.0.1-linux-amd64
 ```
 
 Use `-linux-arm64` if `uname -m` reports `aarch64`.
@@ -66,7 +66,7 @@ Use `-linux-arm64` if `uname -m` reports `aarch64`.
 ### 2. Run the installer
 
 ```bash
-sudo ./docksight-cli-v0.0.13-linux-amd64 install
+sudo ./docksight-cli-v0.0.1-linux-amd64 install
 ```
 
 ### What happens
@@ -104,10 +104,10 @@ Expected output:
 → Data directory:    /var/lib/docksight
 → Port:              2002
 → Installing the CLI into /usr/local/bin/docksight
-✓ CLI installed from /root/docksight-cli-v0.0.13-linux-amd64
+✓ CLI installed from /root/docksight-cli-v0.0.1-linux-amd64
 → Checking the latest DockSight release
-✓ Latest release v0.0.13
-✓ Installer package docksight-platform-v0.0.13.tar.gz found
+✓ Latest release v0.0.1
+✓ Installer package docksight-platform-v0.0.1.tar.gz found
 → Downloading installer package
 ✓ Download completed
 ✓ Platform installed
@@ -214,14 +214,14 @@ Run this on **each Docker host** you want to manage.
 ### 1. Download the CLI
 
 ```bash
-curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
-chmod +x docksight-cli-v0.0.13-linux-amd64
+curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.1-linux-amd64
+chmod +x docksight-cli-v0.0.1-linux-amd64
 ```
 
 ### 2. Install the agent
 
 ```bash
-sudo ./docksight-cli-v0.0.13-linux-amd64 agent install --url https://platform.example.com
+sudo ./docksight-cli-v0.0.1-linux-amd64 agent install --url https://platform.example.com
 ```
 
 Omit `--url` and the installer prompts for it interactively.
@@ -273,8 +273,8 @@ Expected output:
 → [6/6] Checking internet connectivity
 ✓ Checking internet connectivity
 → Checking the latest DockSight release
-✓ Latest release v0.0.13
-→ Downloading docksight-agent-v0.0.13-linux-amd64
+✓ Latest release v0.0.1
+→ Downloading docksight-agent-v0.0.1-linux-amd64
 ✓ Agent binary installed at /usr/local/bin/docksight-agent
 → Writing /etc/docksight-agent/config.yaml
 ✓ Configured platform wss://platform.example.com/agents
@@ -301,8 +301,8 @@ Expected output:
 ### Pin a version
 
 ```bash
-sudo ./docksight-cli-v0.0.13-linux-amd64 agent install \
-  --url https://platform.example.com --version v0.0.13
+sudo ./docksight-cli-v0.0.1-linux-amd64 agent install \
+  --url https://platform.example.com --version v0.0.1
 ```
 
 Useful when an agent must match a platform that has not been upgraded yet.
@@ -317,7 +317,7 @@ Useful when an agent must match a platform that has not been upgraded yet.
 sudo docksight update                    # CLI + platform to latest
 sudo docksight update --platform         # platform only
 sudo docksight update --cli              # CLI only, no stack restart
-sudo docksight update --version v0.0.13  # pin, or roll back
+sudo docksight update --version v0.0.1  # pin, or roll back
 sudo docksight update --force            # re-apply the current version
 ```
 
@@ -333,7 +333,7 @@ the existing PostgreSQL volume) and the named volumes themselves.
 
 ```bash
 sudo docksight agent update                    # latest
-sudo docksight agent update --version v0.0.13  # pinned, or rolled back
+sudo docksight agent update --version v0.0.1  # pinned, or rolled back
 sudo docksight agent update --url https://new-platform.example.com
 ```
 
@@ -345,7 +345,7 @@ If the CLI is not on PATH on that host (agent installs do not self-install the
 CLI), either use the downloaded binary directly, or install it once:
 
 ```bash
-sudo mv docksight-cli-v0.0.13-linux-amd64 /usr/local/bin/docksight
+sudo mv docksight-cli-v0.0.1-linux-amd64 /usr/local/bin/docksight
 ```
 
 ---
@@ -394,7 +394,7 @@ A healthy agent journal contains `websocket connected` followed by
     mode information, so every download lands as `0644`.
 
     ```bash
-    chmod +x docksight-cli-v0.0.13-linux-amd64
+    chmod +x docksight-cli-v0.0.1-linux-amd64
     ```
 
 ??? failure "`cannot execute binary file: Exec format error`"

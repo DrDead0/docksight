@@ -16,15 +16,15 @@ commit and uploaded to one GitHub release.
 A complete release contains nine files:
 
 ```text
-docksight-platform-v0.0.13.tar.gz
-docksight-cli-v0.0.13-linux-amd64
-docksight-cli-v0.0.13-linux-arm64
-docksight-cli-v0.0.13-darwin-amd64
-docksight-cli-v0.0.13-darwin-arm64
-docksight-cli-v0.0.13-windows-amd64.exe
-docksight-agent-v0.0.13-linux-amd64
-docksight-agent-v0.0.13-linux-arm64
-docksight-agent-v0.0.13-windows-amd64.exe
+docksight-platform-v0.0.1.tar.gz
+docksight-cli-v0.0.1-linux-amd64
+docksight-cli-v0.0.1-linux-arm64
+docksight-cli-v0.0.1-darwin-amd64
+docksight-cli-v0.0.1-darwin-arm64
+docksight-cli-v0.0.1-windows-amd64.exe
+docksight-agent-v0.0.1-linux-amd64
+docksight-agent-v0.0.1-linux-arm64
+docksight-agent-v0.0.1-windows-amd64.exe
 ```
 
 The agent is built for Linux and Windows — the two platforms where it can run
@@ -58,7 +58,7 @@ const (
     agentPrefix    = "docksight-agent-"
     archiveSuffix  = ".tar.gz"
 
-    // Releases up to v0.0.6 used this name for the bundle.
+    // The name the earliest bundles used, still accepted on install.
     legacyPlatformPrefix = "docksight-install-"
 )
 ```
@@ -85,8 +85,8 @@ a naive substring check would hand an ARM machine an x86 binary.
 When an asset is missing, the error names what was wanted and what exists:
 
 ```text
-release v0.0.12 publishes no asset matching docksight-agent-* for linux-amd64
-(has: docksight-cli-v0.0.12-linux-amd64, docksight-platform-v0.0.12.tar.gz, ...)
+release v0.0.1 publishes no asset matching docksight-agent-* for linux-amd64
+(has: docksight-cli-v0.0.1-linux-amd64, docksight-platform-v0.0.1.tar.gz, ...)
 ```
 
 ---
@@ -94,7 +94,7 @@ release v0.0.12 publishes no asset matching docksight-agent-* for linux-amd64
 ## Building a release
 
 ```bash
-scripts/build-release.sh v0.0.14
+scripts/build-release.sh v0.0.1
 ```
 
 The script:
@@ -103,7 +103,7 @@ The script:
    (`dockersight-installation.yml`, `.env.example`, `default.conf`) and refuses
    to build otherwise
 2. Writes the version into `bundle/VERSION`
-3. Packs `bundle/` into `docksight-platform-v0.0.14.tar.gz`
+3. Packs `bundle/` into `docksight-platform-v0.0.1.tar.gz`
 4. Cross-compiles the CLI for five targets, stamping the version, commit, and
    UTC build date with `-ldflags`
 5. Cross-compiles the agent for `linux/amd64`, `linux/arm64` and `windows/amd64`
@@ -112,21 +112,21 @@ Output goes to `release/`, which is git-ignored — these are build outputs,
 rebuildable from any tag, and binaries do not belong in git history.
 
 ```console
-$ scripts/build-release.sh v0.0.14
-built docksight-platform-v0.0.14.tar.gz
-built docksight-cli-v0.0.14-linux-amd64
-built docksight-cli-v0.0.14-linux-arm64
-built docksight-cli-v0.0.14-darwin-amd64
-built docksight-cli-v0.0.14-darwin-arm64
-built docksight-cli-v0.0.14-windows-amd64.exe
-built docksight-agent-v0.0.14-linux-amd64
-built docksight-agent-v0.0.14-linux-arm64
-built docksight-agent-v0.0.14-windows-amd64.exe
+$ scripts/build-release.sh v0.0.1
+built docksight-platform-v0.0.1.tar.gz
+built docksight-cli-v0.0.1-linux-amd64
+built docksight-cli-v0.0.1-linux-arm64
+built docksight-cli-v0.0.1-darwin-amd64
+built docksight-cli-v0.0.1-darwin-arm64
+built docksight-cli-v0.0.1-windows-amd64.exe
+built docksight-agent-v0.0.1-linux-amd64
+built docksight-agent-v0.0.1-linux-arm64
+built docksight-agent-v0.0.1-windows-amd64.exe
 
-Upload every file above to the v0.0.14 GitHub release.
+Upload every file above to the v0.0.1 GitHub release.
 ```
 
-Build elsewhere with `DOCKSIGHT_RELEASE_DIR=/tmp/rel scripts/build-release.sh v0.0.14`.
+Build elsewhere with `DOCKSIGHT_RELEASE_DIR=/tmp/rel scripts/build-release.sh v0.0.1`.
 
 ---
 
@@ -137,20 +137,20 @@ artifacts, uploads them, and verifies the release carries every one — no manua
 steps.
 
 ```bash
-git tag v0.0.14 && git push origin v0.0.14
+git tag v0.0.1 && git push origin v0.0.1
 ```
 
 The same upload and verification can still be run by hand:
 
 ```bash
-scripts/publish-release.sh v0.0.14
+scripts/publish-release.sh v0.0.1
 ```
 
 This uploads all nine artifacts **and then verifies against the GitHub API that
 the release actually carries them**. That verification is the important part.
 
 !!! warning "The failure this prevents"
-    Four consecutive releases (v0.0.9 through v0.0.12) shipped without agent
+    Four consecutive releases (v0.0.1 through v0.0.1) shipped without agent
     binaries even though the build produced them — the loss was entirely in a
     manual upload step. The failure mode is asymmetric and that is why it went
     unnoticed: a missing *platform* asset breaks your own install immediately,
@@ -168,9 +168,9 @@ The script also:
 Manual equivalent:
 
 ```bash
-gh release create v0.0.14 release/docksight-*
+gh release create v0.0.1 release/docksight-*
 # or, to add to an existing release
-gh release upload v0.0.14 release/docksight-agent-v0.0.14-linux-amd64
+gh release upload v0.0.1 release/docksight-agent-v0.0.1-linux-amd64
 ```
 
 ---
@@ -186,7 +186,7 @@ graph LR
 ```
 
 1. **Merge** everything intended for the release
-2. **Tag**: `git tag v0.0.14 && git push origin v0.0.14`
+2. **Tag**: `git tag v0.0.1 && git push origin v0.0.1`
 3. **Build & publish** happen automatically: the tag-push workflow runs
    `build-release.sh`, uploads `release/*` to the release, and fails the run if
    any of the nine assets is missing
@@ -207,9 +207,9 @@ mixed versions — that is by design:
 
 | Scenario | Result |
 | --- | --- |
-| Platform v0.0.13, agents v0.0.13 | Normal |
-| Platform v0.0.13, one agent v0.0.9 | Supported; the agent uses only the protocol it knows |
-| CLI v0.0.13, platform v0.0.9 | Supported; the CLI resolves assets by kind, not by version |
+| Platform v0.0.1, agents v0.0.1 | Normal |
+| Platform v0.0.1, one agent v0.0.1 | Supported; the agent uses only the protocol it knows |
+| CLI v0.0.1, platform v0.0.1 | Supported; the CLI resolves assets by kind, not by version |
 
 The protocol's compatibility rules — ignore unknown types, ignore unknown
 payload fields — are what make mixed fleets safe. See
@@ -222,7 +222,7 @@ payload fields — are what make mixed fleets safe. See
 
 ## Backward compatibility
 
-`docksight-install-` (the bundle prefix used up to v0.0.6) is still accepted by
+`docksight-install-` (the bundle prefix used up to v0.0.1) is still accepted by
 platform discovery. A current CLI can therefore install an old release. Do not
 remove that alias without checking which releases users may still pin to.
 

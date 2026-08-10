@@ -27,9 +27,10 @@ func Info() map[string]string {
 
 // String returns a short human-readable version line.
 //
-// The release script stamps Version straight from the git tag ("v0.0.14"),
-// while the unstamped default carries no prefix ("0.1.0"). Trimming before
-// prefixing renders both as "v0.0.14" rather than "vv0.0.14".
+// The release script stamps Version straight from the git tag, which carries
+// a leading "v" ("v0.0.1"), while the unstamped default has none ("0.1.0").
+// Trimming before prefixing gives each exactly one "v" — without it, a
+// released build reported "vv0.0.1".
 func String() string {
 	return "v" + strings.TrimPrefix(Version, "v")
 }

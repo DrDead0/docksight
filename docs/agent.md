@@ -217,7 +217,7 @@ Three outcomes are possible, and they mean different things:
 
 ```bash
 sudo docksight agent update
-sudo docksight agent update --version v0.0.13
+sudo docksight agent update --version v0.0.1
 sudo docksight agent update --url https://new-platform.example.com
 ```
 

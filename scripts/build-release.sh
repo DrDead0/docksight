@@ -12,14 +12,14 @@
 # filenames below must stay in sync with cmd/internal/release/asset.go, which
 # is what the installer uses to discover them.
 #
-# Usage: scripts/build-release.sh v0.0.7
+# Usage: scripts/build-release.sh v0.0.1
 
 set -euo pipefail
 
 VERSION="${1:-}"
 
 if [ -z "$VERSION" ]; then
-	echo "usage: $0 <version>   e.g. $0 v0.0.7" >&2
+	echo "usage: $0 <version>   e.g. $0 v0.0.1" >&2
 	exit 1
 fi
 

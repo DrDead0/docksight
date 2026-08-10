@@ -167,8 +167,8 @@ The CLI records what is installed in `/opt/docksight/state.json`:
 
 ```json
 {
-  "cli_version": "v0.0.13",
-  "platform_version": "v0.0.13",
+  "cli_version": "v0.0.1",
+  "platform_version": "v0.0.1",
   "installed_at": "2026-07-31T22:14:03Z",
   "updated_at": "2026-08-01T09:02:41Z"
 }

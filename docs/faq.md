@@ -12,7 +12,7 @@ The file is not a binary. It is GitHub's HTML "not found" page, saved under the
 binary's name because the download URL was wrong and `curl` was not told to fail:
 
 ```console
-$ head -c 16 docksight-cli-v0.0.13-linux-amd64 | od -c
+$ head -c 16 docksight-cli-v0.0.1-linux-amd64 | od -c
 0000000  \n  \n  \n  \n      \n  \n   <   !   D   O   C   T   Y   P
 ```
 
@@ -27,7 +27,7 @@ Always download with `-f`, which turns a 404 into an error instead of a saved
 error page:
 
 ```bash
-curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
+curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.1-linux-amd64
 ```
 
 The usual root cause is that the asset genuinely does not exist on that release
@@ -43,7 +43,7 @@ The execute bit is missing. GitHub serves release assets over plain HTTP with no
 file mode, so every download arrives as `0644`:
 
 ```bash
-chmod +x docksight-cli-v0.0.13-linux-amd64
+chmod +x docksight-cli-v0.0.1-linux-amd64
 ```
 
 This is also true of assets built on Windows, where NTFS has no execute bit to
@@ -255,15 +255,15 @@ The release exists but nobody uploaded the agent binaries to it. The error lists
 what *is* published:
 
 ```text
-release v0.0.12 publishes no asset matching docksight-agent-* for linux-amd64
-(has: docksight-cli-v0.0.12-linux-amd64, docksight-platform-v0.0.12.tar.gz, ...)
+release v0.0.1 publishes no asset matching docksight-agent-* for linux-amd64
+(has: docksight-cli-v0.0.1-linux-amd64, docksight-platform-v0.0.1.tar.gz, ...)
 ```
 
 Fix it on the release side:
 
 ```bash
-scripts/build-release.sh v0.0.12
-scripts/publish-release.sh v0.0.12
+scripts/build-release.sh v0.0.1
+scripts/publish-release.sh v0.0.1
 ```
 
 `publish-release.sh` verifies against the API after uploading, which is what
@@ -278,8 +278,8 @@ properly, or pin with `--version`.
 ### Can I run mixed versions?
 
 Yes, by design. The CLI, platform and agent version independently, and the
-protocol ignores unknown message types and unknown payload fields. A v0.0.9
-agent works against a v0.0.13 platform, using only the subset it knows.
+protocol ignores unknown message types and unknown payload fields. A v0.0.1
+agent works against a v0.0.1 platform, using only the subset it knows.
 
 ### Should release artifacts be committed to git?
 
@@ -378,7 +378,7 @@ That is deliberate: retyping is how a wrong port gets introduced.
 ### How do I roll an agent back?
 
 ```bash
-sudo docksight agent update --version v0.0.9
+sudo docksight agent update --version v0.0.1
 ```
 
 Only releases that actually publish agent binaries are valid targets.

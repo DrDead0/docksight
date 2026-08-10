@@ -7,14 +7,14 @@
 # on four consecutive releases, and the failure only surfaces later on a
 # remote host as "no asset matching docksight-agent-*".
 #
-# Usage: scripts/publish-release.sh v0.0.12
+# Usage: scripts/publish-release.sh v0.0.1
 
 set -euo pipefail
 
 VERSION="${1:-}"
 
 if [ -z "$VERSION" ]; then
-	echo "usage: $0 <version>   e.g. $0 v0.0.12" >&2
+	echo "usage: $0 <version>   e.g. $0 v0.0.1" >&2
 	exit 1
 fi
 

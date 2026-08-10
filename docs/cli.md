@@ -90,15 +90,15 @@ sudo docksight install
 **Output**
 
 ```console
-$ sudo ./docksight-cli-v0.0.13-linux-amd64 install
+$ sudo ./docksight-cli-v0.0.1-linux-amd64 install
 → [1/5] Checking operating system
 ✓ Checking operating system
 ...
 → Installing the CLI into /usr/local/bin/docksight
-✓ CLI installed from /root/docksight-cli-v0.0.13-linux-amd64
+✓ CLI installed from /root/docksight-cli-v0.0.1-linux-amd64
 → Checking the latest DockSight release
-✓ Latest release v0.0.13
-✓ Installer package docksight-platform-v0.0.13.tar.gz found
+✓ Latest release v0.0.1
+✓ Installer package docksight-platform-v0.0.1.tar.gz found
 → Downloading installer package
 ✓ Download completed
 ✓ Platform installed
@@ -141,8 +141,8 @@ sudo docksight update
 sudo docksight update                      # both, to latest
 sudo docksight update --platform           # platform only
 sudo docksight update --cli                # CLI only, stack untouched
-sudo docksight update --version v0.0.13    # pin
-sudo docksight update --version v0.0.9     # roll back
+sudo docksight update --version v0.0.2     # pin to a specific release
+sudo docksight update --version v0.0.1     # roll back to an earlier one
 sudo docksight update --force              # re-apply current version
 ```
 
@@ -151,9 +151,9 @@ sudo docksight update --force              # re-apply current version
 ```console
 $ sudo docksight update
 → Checking the latest DockSight release
-✓ Latest release v0.0.13
-→ CLI already at v0.0.13
-→ Platform already at v0.0.13
+✓ Latest release v0.0.1
+→ CLI already at v0.0.1
+→ Platform already at v0.0.1
 ✓ DockSight is up to date
 ```
 
@@ -167,17 +167,17 @@ so there is a brief outage. `.env` and named volumes survive.
 
 ```console
 $ docksight version
-→ CLI version: v0.0.13
+→ CLI version: v0.0.1
 → Commit: a1b2c3d
 → Build date: 2026-08-07T14:00:00Z
-→ Platform version: v0.0.13
+→ Platform version: v0.0.1
 ```
 
 On a host with no platform installed:
 
 ```console
 $ docksight version
-→ CLI version: v0.0.13
+→ CLI version: v0.0.1
 → Commit: a1b2c3d
 → Build date: 2026-08-07T14:00:00Z
 → Platform version: not installed
@@ -226,7 +226,7 @@ sudo docksight agent install
 sudo docksight agent install --url https://platform.example.com
 
 # Pinned
-sudo docksight agent install --url https://platform.example.com --version v0.0.13
+sudo docksight agent install --url https://platform.example.com --version v0.0.1
 
 # Plain HTTP on a private network
 sudo docksight agent install --url http://10.0.0.5:2002
@@ -253,8 +253,8 @@ sudo docksight agent install --url http://10.0.0.5:2002
 → [6/6] Checking internet connectivity
 ✓ Checking internet connectivity
 → Checking the latest DockSight release
-✓ Latest release v0.0.13
-→ Downloading docksight-agent-v0.0.13-linux-amd64
+✓ Latest release v0.0.1
+→ Downloading docksight-agent-v0.0.1-linux-amd64
 ✓ Agent binary installed at /usr/local/bin/docksight-agent
 → Writing /etc/docksight-agent/config.yaml
 ✓ Configured platform wss://platform.example.com/agents
@@ -296,8 +296,8 @@ sudo docksight agent update
 
 ```bash
 sudo docksight agent update                                    # latest
-sudo docksight agent update --version v0.0.13                  # pinned
-sudo docksight agent update --version v0.0.9                   # roll back
+sudo docksight agent update --version v0.0.2                   # pinned
+sudo docksight agent update --version v0.0.1                   # roll back
 sudo docksight agent update --url https://new-platform.example.com
 ```
 
@@ -364,17 +364,17 @@ These are declared but not implemented:
 === "First platform install"
 
     ```bash
-    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
-    chmod +x docksight-cli-v0.0.13-linux-amd64
-    sudo ./docksight-cli-v0.0.13-linux-amd64 install
+    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.1-linux-amd64
+    chmod +x docksight-cli-v0.0.1-linux-amd64
+    sudo ./docksight-cli-v0.0.1-linux-amd64 install
     ```
 
 === "Add a Docker host"
 
     ```bash
-    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.13-linux-amd64
-    chmod +x docksight-cli-v0.0.13-linux-amd64
-    sudo ./docksight-cli-v0.0.13-linux-amd64 agent install --url https://platform.example.com
+    curl -fLO https://github.com/Open-Source-Kigali/docksight/releases/latest/download/docksight-cli-v0.0.1-linux-amd64
+    chmod +x docksight-cli-v0.0.1-linux-amd64
+    sudo ./docksight-cli-v0.0.1-linux-amd64 agent install --url https://platform.example.com
     ```
 
 === "Upgrade everything"
@@ -390,7 +390,7 @@ These are declared but not implemented:
 === "Roll back one agent"
 
     ```bash
-    sudo docksight agent update --version v0.0.9
+    sudo docksight agent update --version v0.0.1
     ```
 
 ---

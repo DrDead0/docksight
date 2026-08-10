@@ -129,7 +129,7 @@ go build -o /tmp/docksight .
 === "Everything for a release"
 
     ```bash
-    scripts/build-release.sh v0.0.14
+    scripts/build-release.sh v0.0.1
     ```
 
 === "CLI only"
@@ -140,7 +140,7 @@ go build -o /tmp/docksight .
     COMMIT="$(git rev-parse --short HEAD)"
     BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     go build -ldflags "-s -w \
-      -X $MODULE/cmd/internal/buildinfo.Version=v0.0.14 \
+      -X $MODULE/cmd/internal/buildinfo.Version=v0.0.1 \
       -X $MODULE/cmd/internal/buildinfo.Commit=$COMMIT \
       -X $MODULE/cmd/internal/buildinfo.BuildDate=$BUILD_DATE" \
       -o docksight .
