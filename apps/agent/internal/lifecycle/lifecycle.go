@@ -17,9 +17,19 @@ type Manager struct {
 	once   sync.Once
 }
 
-// New creates a lifecycle manager that listens for SIGINT and SIGTERM.
-func New() *Manager {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+// New creates a lifecycle manager that listens for SIGINT and SIGTERM, and
+// also shuts down when parent is cancelled.
+//
+// The parent is what makes the same shutdown path reachable from outside the
+// process. A Windows service never receives SIGTERM — the Service Control
+// Manager delivers SERVICE_CONTROL_STOP on its own channel — so the service
+// handler cancels the parent and the hooks below run exactly as they do for
+// Ctrl+C. One shutdown path, two triggers.
+func New(parent context.Context) *Manager {
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	return &Manager{ctx: ctx, cancel: cancel}
 }
 

@@ -65,10 +65,14 @@ No. Both installers reject non-Linux hosts during validation:
 ✗ system validation failed: DockSight installs on Linux only, this host runs windows
 ```
 
-The platform uses Linux filesystem paths, and the agent installs as a systemd
+The platform uses Linux filesystem paths, and the installer registers a systemd
 service, which Windows and macOS do not have. The release does publish Windows
-and macOS **CLI** builds, but they can only run `version` and `--help` — see
-[Security and scope](roadmap.md#agent) for the Windows agent plan.
+and macOS **CLI** builds, but they can only run `version` and `--help`.
+
+The Windows **agent** is further along: it is published as
+`docksight-agent-<version>-windows-amd64.exe` and runs as a proper Windows
+service, so it can be registered by hand today. Only the installer is missing —
+see [Windows support](agent.md#windows-support).
 
 ### Do I need to install the platform before the agents?
 

@@ -246,15 +246,66 @@ confirmations.
 
 ## Windows support
 
-The agent's Docker client supports Windows named pipes
-(`\\.\pipe\docker_engine`) and the binary cross-compiles for Windows. However:
+The agent runs on Windows as a Service Control Manager service.
+`docksight-agent-<version>-windows-amd64.exe` is published with every release,
+and the Docker client talks to the Engine over the named pipe
+`\\.\pipe\docker_engine`.
 
-- No Windows **installer** exists — the CLI installs a systemd unit, which
-  Windows does not have.
-- The release pipeline builds agent binaries only for `linux/amd64` and
-  `linux/arm64`.
+### One binary, two modes
 
-See the [Roadmap](roadmap.md#agent) and the
+The same executable runs as a console application and as a service. It decides
+which at startup with `svc.IsWindowsService()` rather than taking a flag, so a
+developer runs it directly and the SCM runs the identical file:
+
+```powershell
+# Console — logs to the terminal, Ctrl+C stops it
+.\docksight-agent.exe --config config.yaml
+
+# Service — installed by the CLI, managed with the usual tools
+Start-Service docksight-agent
+Stop-Service docksight-agent
+Get-Service docksight-agent
+```
+
+`Stop-Service` sends `SERVICE_CONTROL_STOP`, which the agent turns into the
+same context cancellation an interrupt produces: log streams close, the Docker
+client closes, and the process exits 0. A machine reboot sends
+`SERVICE_CONTROL_SHUTDOWN`, which is accepted the same way — without it Windows
+would terminate the agent rather than stop it.
+
+### Where the logs go
+
+A Windows service has no console, so stdout goes nowhere. The agent writes to
+two places instead:
+
+| Destination | Contents |
+| --- | --- |
+| `C:\ProgramData\DockSight\logs\agent.log` | the full structured log |
+| Windows Event Log, source `docksight-agent` | service lifecycle only — started, stopped, exited with an error |
+
+```powershell
+Get-Content 'C:\ProgramData\DockSight\logs\agent.log' -Tail 50 -Wait
+Get-EventLog -LogName Application -Source docksight-agent -Newest 20
+```
+
+The file rotates at 10 MiB and keeps three previous generations, bounding disk
+use at roughly 40 MiB — a service left running for months must not fill the
+disk of the host it is monitoring. Restarting the agent appends rather than
+truncating, so the log that explains a restart survives it.
+
+Registering the Event Log source needs Administrator rights and is done once at
+install time. An agent whose source is not registered still starts and runs
+normally; only the Event Log entries are missing, and the log file still holds
+everything.
+
+On Linux none of this applies: the agent writes to stdout and systemd captures
+it into the journal, which already provides rotation and retention.
+
+### Not yet done
+
+`docksight agent install` still refuses to run on Windows, so the service must
+currently be registered by hand. That work is tracked separately — see the
+[Roadmap](roadmap.md#agent) and the
 [FAQ](faq.md#can-i-install-docksight-on-windows-or-macos).
 
 ---

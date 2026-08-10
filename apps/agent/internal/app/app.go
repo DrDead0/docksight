@@ -31,13 +31,25 @@ func New(configPath string) *App {
 
 // Run executes the agent lifecycle:
 // config → logger → identity → docker → logs → connect → register → heartbeat → wait.
-func (a *App) Run() error {
+//
+// The context is the supervisor's: cancelling it shuts the agent down exactly
+// as an interrupt does. Under the Windows Service Control Manager that is the
+// only way in, because a service never receives a signal.
+func (a *App) Run(ctx context.Context) error {
 	cfg, err := config.Load(a.configPath)
 	if err != nil {
 		return fmt.Errorf("configuration: %w", err)
 	}
 
-	logger.Setup(cfg.Logging.Level, os.Stdout)
+	sink, closeSink, err := openLogSink()
+	if err != nil {
+		return fmt.Errorf("logging: %w", err)
+	}
+	if closeSink != nil {
+		defer closeSink()
+	}
+
+	logger.Setup(cfg.Logging.Level, sink)
 	logger.Info("configuration loaded", "path", a.configPath, "server", cfg.Server.URL)
 	warnIfPlaintextServerURL(cfg.Server.URL)
 	logger.Printf("DockSight Agent started\n")
@@ -95,7 +107,7 @@ func (a *App) Run() error {
 
 	printStartupSummary(id.ID, created, dockerAvailable, cfg.Server.URL)
 
-	lc := lifecycle.New()
+	lc := lifecycle.New(ctx)
 	client := communication.NewClient(cfg.Server.URL, communication.AgentInfo{
 		UUID:         id.ID,
 		Hostname:     hostname,
