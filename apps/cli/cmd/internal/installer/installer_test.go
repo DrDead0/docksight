@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,6 +41,63 @@ func (f *fakeStack) Restart(ctx context.Context, progress io.Writer) error {
 
 func (f *fakeStack) WaitReady(ctx context.Context) ([]compose.Service, error) {
 	return f.services, f.readyErr
+}
+
+// fakeHost stands in for the machine-wide changes an install makes.
+//
+// These are the only two operations an installer test must never let through
+// to the real implementation: a machine PATH entry and a firewall rule both
+// outlive the process, and the directory this would put on PATH is a
+// t.TempDir that is deleted the moment the test ends.
+type fakeHost struct {
+	pathed    []string
+	ports     []int
+	protected []string
+
+	pathErr    error
+	portErr    error
+	protectErr error
+}
+
+func (f *fakeHost) EnsureOnPath(directory string) (bool, error) {
+
+	if f.pathErr != nil {
+		return false, f.pathErr
+	}
+
+	for _, existing := range f.pathed {
+
+		if existing == directory {
+			return false, nil
+		}
+	}
+
+	f.pathed = append(f.pathed, directory)
+
+	return true, nil
+}
+
+func (f *fakeHost) ProtectSecret(path string) error {
+	f.protected = append(f.protected, path)
+	return f.protectErr
+}
+
+func (f *fakeHost) AllowPort(_ context.Context, port int) (bool, error) {
+
+	if f.portErr != nil {
+		return false, f.portErr
+	}
+
+	for _, existing := range f.ports {
+
+		if existing == port {
+			return false, nil
+		}
+	}
+
+	f.ports = append(f.ports, port)
+
+	return true, nil
 }
 
 // recordingReporter captures the messages the cmd layer would print.
@@ -172,6 +230,16 @@ func newGithubStub(t *testing.T, version string) *githubStub {
 func harness(t *testing.T, version string) (*Installer, *githubStub, *fakeStack, *recordingReporter) {
 	t.Helper()
 
+	install, stub, stack, _, reporter := fullHarness(t, version)
+
+	return install, stub, stack, reporter
+}
+
+// fullHarness is harness plus the machine integration, for the tests that
+// assert on it.
+func fullHarness(t *testing.T, version string) (*Installer, *githubStub, *fakeStack, *fakeHost, *recordingReporter) {
+	t.Helper()
+
 	root := t.TempDir()
 
 	cfg := config.Config{
@@ -191,12 +259,14 @@ func harness(t *testing.T, version string) (*Installer, *githubStub, *fakeStack,
 	}
 
 	reporter := &recordingReporter{}
+	host := &fakeHost{}
 
 	install := New(cfg, reporter)
 	install.Releases.BaseURL = stub.server.URL
 	install.Stack = stack
+	install.Host = host
 
-	return install, stub, stack, reporter
+	return install, stub, stack, host, reporter
 }
 
 func TestInstall(t *testing.T) {
@@ -478,4 +548,155 @@ func emptyReleaseServer(t *testing.T) string {
 	t.Cleanup(server.Close)
 
 	return server.URL
+}
+
+// The CLI has a home, but a home nobody searches is a CLI nobody can run.
+func TestInstallPutsTheCLIOnPath(t *testing.T) {
+
+	install, _, _, host, reporter := fullHarness(t, "v0.0.4")
+
+	if err := install.Install(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(host.pathed) != 1 || host.pathed[0] != install.Config.InstallDirectory() {
+		t.Fatalf("install directory not put on PATH: %v", host.pathed)
+	}
+
+	if !reporter.contains("system PATH") {
+		t.Error("the PATH change was not reported to the user")
+	}
+}
+
+// Agents live on other machines and dial in, so the port has to be open
+// before anything is listening on it.
+func TestInstallOpensThePlatformPort(t *testing.T) {
+
+	install, _, stack, host, _ := fullHarness(t, "v0.0.4")
+
+	if err := install.Install(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(host.ports) != 1 || host.ports[0] != install.Config.Port {
+		t.Fatalf("platform port not opened: %v", host.ports)
+	}
+
+	if stack.started != 1 {
+		t.Fatalf("stack started %d times", stack.started)
+	}
+}
+
+// A host that refuses the rule must fail before the platform is up and
+// silently unreachable.
+func TestInstallStopsWhenThePortCannotBeOpened(t *testing.T) {
+
+	install, _, stack, host, _ := fullHarness(t, "v0.0.4")
+
+	host.portErr = errors.New("the firewall service is not running")
+
+	err := install.Install(context.Background())
+
+	if err == nil {
+		t.Fatal("a firewall failure was reported as a successful install")
+	}
+
+	if !strings.Contains(err.Error(), "firewall service") {
+		t.Errorf("error lost the cause: %v", err)
+	}
+
+	if stack.started != 0 {
+		t.Error("the stack was started despite the port being closed")
+	}
+}
+
+// Re-running an install must not append a second PATH entry or a second rule.
+func TestInstallHostChangesAreIdempotent(t *testing.T) {
+
+	install, _, _, host, _ := fullHarness(t, "v0.0.4")
+
+	ctx := context.Background()
+
+	if err := install.Install(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := install.Install(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(host.pathed) != 1 {
+		t.Errorf("PATH was modified %d times", len(host.pathed))
+	}
+
+	if len(host.ports) != 1 {
+		t.Errorf("the firewall was modified %d times", len(host.ports))
+	}
+}
+
+// The generated .env holds POSTGRES_PASSWORD and JWT_SECRET, so the installer
+// must hand it to the platform's hardening step. What that step actually does
+// is asserted against the real implementation in the filesystem package.
+func TestInstallProtectsGeneratedCredentials(t *testing.T) {
+
+	install, _, _, host, _ := fullHarness(t, "v0.0.4")
+
+	if err := install.Install(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	content, err := os.ReadFile(install.Config.EnvPath())
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(content), "POSTGRES_PASSWORD=") {
+		t.Fatalf("the env file carries no credentials:\n%s", content)
+	}
+
+	if len(host.protected) != 1 || host.protected[0] != install.Config.EnvPath() {
+		t.Fatalf("the credentials file was not protected: %v", host.protected)
+	}
+}
+
+// An installation made before the hardening existed has a .env that every
+// local account can read. Reinstalling must repair it, not skip it because
+// the file was already there.
+func TestInstallProtectsPreExistingCredentials(t *testing.T) {
+
+	install, _, _, host, _ := fullHarness(t, "v0.0.4")
+
+	ctx := context.Background()
+
+	if err := install.Install(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := install.Install(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(host.protected) != 2 {
+		t.Fatalf("the existing credentials file was not re-protected: %v", host.protected)
+	}
+}
+
+// A host that cannot protect the file must fail the install rather than leave
+// credentials readable and report success.
+func TestInstallStopsWhenCredentialsCannotBeProtected(t *testing.T) {
+
+	install, _, stack, host, _ := fullHarness(t, "v0.0.4")
+
+	host.protectErr = errors.New("failed to restrict access")
+
+	err := install.Install(context.Background())
+
+	if err == nil {
+		t.Fatal("unprotected credentials were reported as a successful install")
+	}
+
+	if stack.started != 0 {
+		t.Error("the stack was started with unprotected credentials")
+	}
 }

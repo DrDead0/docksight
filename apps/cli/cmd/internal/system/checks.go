@@ -20,9 +20,13 @@ var supportedArchitectures = []string{"amd64", "arm64"}
 // releases. Checking anything else would prove the wrong thing.
 const connectivityProbe = "https://api.github.com"
 
-// agentOperatingSystems are the hosts the agent installs on. The platform is
-// not in this list: it is a Compose stack that still assumes Linux paths.
-var agentOperatingSystems = []string{"linux", "windows"}
+// supportedOperatingSystems are the hosts DockSight installs on.
+//
+// Windows is in this list for both deliverables. The agent runs natively as a
+// Service Control Manager service; the platform is five Linux container
+// images run by a Docker Engine in Linux-container mode, which on Windows
+// means Docker Desktop. Neither ships for macOS.
+var supportedOperatingSystems = []string{"linux", "windows"}
 
 // NotElevatedError reports that this process lacks the privileges to install
 // a service.
@@ -40,29 +44,15 @@ func (e *NotElevatedError) Error() string {
 	return e.Reason
 }
 
-// CheckOS reports whether this is a supported operating system for the
-// platform install.
+// CheckOS reports whether this is a supported operating system.
+//
+// Both installers share this gate. They were briefly separate, while the
+// agent supported Windows and the platform did not; now that the platform
+// installs there too, one list is the truth and a second would only be a
+// place for the two to drift apart.
 func CheckOS() error {
 
-	if runtime.GOOS != "linux" {
-		return fmt.Errorf(
-			"DockSight installs on Linux only, this host runs %s",
-			runtime.GOOS,
-		)
-	}
-
-	return nil
-}
-
-// CheckAgentOS reports whether the agent installs on this operating system.
-//
-// This gate is wider than CheckOS on purpose. The agent is a single binary
-// supervised by whatever service manager the host already runs — systemd on
-// Linux, the Service Control Manager on Windows — so the only thing it needs
-// from the OS is one it has an implementation for.
-func CheckAgentOS() error {
-
-	for _, supported := range agentOperatingSystems {
+	for _, supported := range supportedOperatingSystems {
 
 		if runtime.GOOS == supported {
 			return nil
@@ -70,10 +60,61 @@ func CheckAgentOS() error {
 	}
 
 	return fmt.Errorf(
-		"the DockSight Agent installs on %s only, this host runs %s",
-		strings.Join(agentOperatingSystems, " and "),
+		"DockSight installs on %s, this host runs %s",
+		strings.Join(supportedOperatingSystems, " and "),
 		runtime.GOOS,
 	)
+}
+
+// CheckDockerLinuxContainers reports whether the Engine runs Linux containers.
+//
+// This is a Windows question. A Docker Engine there can be switched between
+// Linux and Windows container modes, and only one of them can be active. The
+// platform is five Linux images — postgres and redis on Alpine among them —
+// and in Windows mode the daemon rejects them with an image-manifest error
+// that says nothing about the mode being wrong.
+func CheckDockerLinuxContainers(ctx context.Context) error {
+
+	command := exec.CommandContext(ctx, "docker", "info", "--format", "{{.OSType}}")
+
+	output, err := command.Output()
+
+	if err != nil {
+		return fmt.Errorf("cannot determine the Docker container mode: %w", err)
+	}
+
+	mode := strings.TrimSpace(string(output))
+
+	if mode == "linux" {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"Docker is running %s containers, and the DockSight platform is built from Linux images. "+
+			"Switch to Linux containers and run this again",
+		mode,
+	)
+}
+
+// DockerDesktop reports whether the Engine behind the CLI is Docker Desktop.
+//
+// It is not a requirement — a Docker Engine reached any other way is equally
+// good, and better in one respect, which is why this is asked at all. Docker
+// Desktop's engine starts with its desktop application in a user session, so
+// a host that reboots to a sign-in screen has no Engine and therefore no
+// platform until somebody signs in. The installer says so rather than leaving
+// it to be discovered after an outage.
+func DockerDesktop(ctx context.Context) bool {
+
+	command := exec.CommandContext(ctx, "docker", "info", "--format", "{{.OperatingSystem}}")
+
+	output, err := command.Output()
+
+	if err != nil {
+		return false
+	}
+
+	return strings.Contains(strings.ToLower(string(output)), "docker desktop")
 }
 
 // CheckArchitecture reports whether builds exist for this CPU.

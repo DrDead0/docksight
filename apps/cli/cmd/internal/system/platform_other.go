@@ -7,6 +7,14 @@ import (
 	"os"
 )
 
+// platformExtraRequirements is what `docksight install` needs beyond Docker
+// on this platform. On Linux that is nothing: root is surfaced as a
+// permission error when the install writes, which is the behaviour operators
+// already know, and the Engine has no container mode to get wrong.
+func platformExtraRequirements() []Requirement {
+	return nil
+}
+
 // agentServiceRequirements is what supervising the agent needs on this
 // platform.
 //

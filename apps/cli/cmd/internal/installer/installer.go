@@ -35,6 +35,7 @@ type Installer struct {
 	Config   config.Config
 	Releases *release.Client
 	Stack    Stack
+	Host     Host
 	Report   Reporter
 
 	// Target selects which CLI build to fetch when updating. Defaults to the
@@ -58,6 +59,7 @@ func New(cfg config.Config, reporter Reporter) *Installer {
 		Config:       cfg,
 		Releases:     release.NewClient(),
 		Stack:        compose.NewRunner(cfg.InstallationDir, config.ComposeFileName),
+		Host:         LocalHost{},
 		Report:       reporter,
 		Target:       release.CurrentTarget(),
 		StartTimeout: DefaultStartTimeout,
@@ -81,6 +83,13 @@ func (i *Installer) Install(ctx context.Context) error {
 	}
 
 	if err := i.InstallPlatform(ctx, latest); err != nil {
+		return err
+	}
+
+	// Before the stack starts, so a host that refuses the rule fails while
+	// nothing is listening rather than after the platform is up and quietly
+	// unreachable.
+	if err := i.openFirewall(ctx); err != nil {
 		return err
 	}
 
@@ -131,10 +140,32 @@ func (i *Installer) InstallCLI(ctx context.Context) error {
 
 	if !installed {
 		i.Report.Success("CLI already installed at " + i.Config.BinaryPath)
-		return nil
+	} else {
+		i.Report.Success(fmt.Sprintf("CLI installed from %s", source))
 	}
 
-	i.Report.Success(fmt.Sprintf("CLI installed from %s", source))
+	return i.ensureOnPath()
+}
+
+// ensureOnPath makes the installed CLI resolvable by name.
+//
+// This runs even when the binary was already in place: the copy succeeding
+// says nothing about whether its directory is searched, and an interrupted
+// earlier install could have done one without the other.
+func (i *Installer) ensureOnPath() error {
+
+	directory := i.Config.InstallDirectory()
+
+	added, err := i.host().EnsureOnPath(directory)
+
+	if err != nil {
+		return err
+	}
+
+	if added {
+		i.Report.Success("Added " + directory + " to the system PATH")
+		i.Report.Warn("Open a new terminal for `docksight` to resolve there")
+	}
 
 	return nil
 }
@@ -336,6 +367,36 @@ func (i *Installer) ensureRuntimeFiles() error {
 		i.Report.Warn("Existing " + config.EnvFileName + " kept, credentials unchanged")
 	}
 
+	// Applied whether the file was just written or was already there. The
+	// mode env.Generate passes to os.OpenFile means nothing on Windows, and
+	// an installation made before this existed has a .env that every local
+	// account can read — repairing it is the point of doing this on the
+	// existing-file path too.
+	if err := i.host().ProtectSecret(i.Config.EnvPath()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// openFirewall lets machines other than this one reach the platform.
+//
+// The agent model is outbound-only: agents dial the platform and the platform
+// never dials them. That makes exactly one inbound port the difference
+// between a working installation and one where every agent fails to connect
+// for a reason that looks nothing like a firewall.
+func (i *Installer) openFirewall(ctx context.Context) error {
+
+	opened, err := i.host().AllowPort(ctx, i.Config.Port)
+
+	if err != nil {
+		return err
+	}
+
+	if opened {
+		i.Report.Success(fmt.Sprintf("Opened TCP port %d in Windows Firewall", i.Config.Port))
+	}
+
 	return nil
 }
 
@@ -359,6 +420,17 @@ func (i *Installer) record(apply func(*state.State)) error {
 	current.UpdatedAt = now
 
 	return state.Save(i.Config.StatePath(), current)
+}
+
+// host returns the machine integration, defaulting to the real one. An
+// Installer built as a literal rather than through New still works.
+func (i *Installer) host() Host {
+
+	if i.Host == nil {
+		return LocalHost{}
+	}
+
+	return i.Host
 }
 
 func (i *Installer) target() release.Target {

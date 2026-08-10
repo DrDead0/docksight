@@ -6,7 +6,7 @@ agent:
 
 server:
   # DockSight server WebSocket endpoint for agent registration
-  url: ws://127.0.0.1:2002/agents
+  url: ws://127.0.0.1:3000/agents
 
 docker:
   # Leave empty to use the platform default.

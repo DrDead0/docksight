@@ -113,14 +113,18 @@ Host CPU and memory are shipped (see **Completed → Monitoring**). What remains
 - Self-reported health beyond heartbeat
 - Plugin system for custom collectors
 - Resource limits for the agent process
-- Windows installer — the agent now runs as a Windows service and the binary is
-  published, but `docksight agent install` still refuses the platform
+- `docksight agent uninstall`, `status` and `logs` — still placeholders on both
+  platforms
 
 ### Platform
 
 - **Authentication for agents** — token issuance and verification. The single
   most important item on this list; see
   [Security](security.md#current-limitations)
+- **Unattended restart on Windows** — the platform installs there, but its
+  engine is Docker Desktop's and starts in a user session, so a reboot leaves
+  it down until somebody signs in. Fixing it means owning a WSL2 distribution
+  with its own Docker Engine rather than depending on Docker Desktop
 - User authentication and sessions
 - Organizations and multi-tenancy
 - Role-based access control
