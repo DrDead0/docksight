@@ -4,20 +4,20 @@ on:
   push:
     branches: [develop]
     paths:
-      - 'apps/server/**'
-      - 'apps/web/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/node.yml'
+      - "apps/server/**"
+      - "apps/web/**"
+      - "packages/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/node.yml"
   pull_request:
     paths:
-      - 'apps/server/**'
-      - 'apps/web/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/node.yml'
+      - "apps/server/**"
+      - "apps/web/**"
+      - "packages/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/node.yml"
 
 jobs:
   build:
@@ -62,3 +62,5 @@ jobs:
 
       - name: Lint web
         run: npm run lint --workspace=@docksight/web
+      - name: Test web
+        run: npm run test --workspace=@docksight/web
