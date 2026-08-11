@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -40,7 +41,11 @@ func TestLoadServerURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("AGENT_SERVER_URL", tt.envURL)
 
-			path := filepath.Join(t.TempDir(), "config.yaml")
+			filename := "config.yaml"
+			if os.PathSeparator != '\\' {
+				filename = `config\windows.yaml`
+			}
+			path := filepath.Join(t.TempDir(), filename)
 			if err := os.WriteFile(path, []byte(tt.config), 0o600); err != nil {
 				t.Fatal(err)
 			}
@@ -50,7 +55,7 @@ func TestLoadServerURL(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected missing server.url to fail")
 				}
-				if !strings.Contains(err.Error(), path) {
+				if !strings.Contains(err.Error(), strconv.Quote(path)) {
 					t.Errorf("error %q does not name config path %q", err, path)
 				}
 				if !strings.Contains(err.Error(), "server.url") {
