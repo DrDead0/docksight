@@ -24,13 +24,14 @@ WORKDIR /app
 # shipped in the final image.
 RUN apk add --no-cache python3 make g++
 
+# Every workspace manifest, and only the ones that exist. The workspaces glob
+# is "apps/*" and "packages/*"; adding a COPY for a workspace that is not in
+# the tree fails the build with "not found" naming the path, which reads like
+# a build-context problem rather than a stale Dockerfile.
 COPY package.json package-lock.json ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-COPY packages/config/package.json packages/config/
 COPY packages/protocol/package.json packages/protocol/
-COPY packages/types/package.json packages/types/
-COPY packages/utils/package.json packages/utils/
 
 # packages/protocol declares a `prepare` script (tsc). npm runs a workspace's
 # own prepare during install even under --ignore-scripts, so its sources have
@@ -77,11 +78,8 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
 # node_modules/@docksight/* are symlinks into the workspace directories.
-# Copying each manifest keeps every link resolvable; only protocol is actually
-# imported by the server, and it is the only one that needs its build output.
-COPY --from=builder /app/packages/config/package.json ./packages/config/package.json
-COPY --from=builder /app/packages/types/package.json ./packages/types/package.json
-COPY --from=builder /app/packages/utils/package.json ./packages/utils/package.json
+# Copying each manifest keeps every link resolvable; protocol is the only
+# workspace under packages/, and the only one that needs its build output.
 COPY --from=builder /app/packages/protocol/package.json ./packages/protocol/package.json
 COPY --from=builder /app/packages/protocol/dist ./packages/protocol/dist
 COPY --from=builder /app/apps/web/package.json ./apps/web/package.json

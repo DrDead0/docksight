@@ -11,13 +11,12 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
+# Every workspace manifest, and only the ones that exist — see the note in
+# apps/server/Dockerfile.
 COPY package.json package-lock.json ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-COPY packages/config/package.json packages/config/
 COPY packages/protocol/package.json packages/protocol/
-COPY packages/types/package.json packages/types/
-COPY packages/utils/package.json packages/utils/
 
 # packages/protocol runs tsc in a `prepare` script during install, so its
 # sources must exist even though the web app does not import it.

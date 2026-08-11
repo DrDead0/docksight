@@ -51,13 +51,19 @@ services:
       start_period: 5s
 
   server:
-    image:  ghcr.io/Open-Source-Kigali/docksight-server:1.1
+    # Lowercase, always. A registry reference must be lowercase, and Docker
+    # rejects the whole compose file with "invalid reference format" before it
+    # tries to pull anything — a message that names the repository but never
+    # says the capitals are the problem. GitHub renders the organisation as
+    # "Open-Source-Kigali", which is what makes this so easy to reintroduce.
+    image: ghcr.io/open-source-kigali/docksight-server:latest
     container_name: docksight-server
     labels:
       com.docksight.internal: "true"
     restart: unless-stopped
-    # Build locally with `docker compose -f docker-compose-prod.yml build`;
-    # the context is the repository root because this is a workspaces monorepo.
+    # Build locally from the REPOSITORY ROOT — this is an npm workspaces
+    # monorepo and the Dockerfile copies every workspace manifest:
+    #   docker build -f apps/server/Dockerfile -t ghcr.io/open-source-kigali/docksight-server:1.1 .
     environment:
       # Must match the postgres service credentials above.
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
@@ -93,7 +99,9 @@ services:
 
 
   web:
-    image:  ghcr.io/Open-Source-Kigali/docksight-web:1.1
+    # See the note on the server image: lowercase is mandatory.
+    #   docker build -f apps/web/Dockerfile -t ghcr.io/open-source-kigali/docksight-web:1.1 .
+    image: ghcr.io/open-source-kigali/docksight-web:latest
     container_name: docksight-web
     labels:
       com.docksight.internal: "true"

@@ -53,7 +53,36 @@ mkdir -p "$OUT"
 # Platform bundle
 # ---------------------------------------------------------------------------
 
+COMPOSE="$BUNDLE/dockersight-installation.yml"
+
+# A registry reference must be lowercase. Docker rejects the whole compose
+# file with "invalid reference format" before pulling anything, and the
+# message never says capitals are the problem — so catch it here, where the
+# fix is obvious, rather than on an operator's host.
+#
+# Every check runs before the first write below, so a build that fails
+# validation leaves the working tree exactly as it was found. This script
+# edits tracked files, and a half-stamped bundle left behind by a failed run
+# is a confusing thing to find in `git status`.
+if grep -nE '^[[:space:]]*image:.*[A-Z]' "$COMPOSE"; then
+	echo "the lines above carry an uppercase image reference, which Docker will reject" >&2
+	exit 1
+fi
+
 printf '%s\n' "$VERSION" >"$BUNDLE/VERSION"
+
+# Stamp the image tags to match the release.
+#
+# The bundle and the container images are one deliverable: the compose file
+# shipped with vX names the images published for vX. Leaving a hardcoded tag
+# means a bundle can quietly reference images from a different release, and
+# the symptom is a platform running last month's server against this month's
+# schema. The committed file carries ":latest", which is what a local
+# `docker compose up` should follow.
+for image in docksight-server docksight-web; do
+	sed -i.bak -E "s#(image: *ghcr\.io/[a-z0-9._/-]+/${image}):[^[:space:]]*#\1:${VERSION}#" "$COMPOSE"
+	rm -f "$COMPOSE.bak"
+done
 
 PLATFORM="$OUT/docksight-platform-$VERSION.tar.gz"
 
