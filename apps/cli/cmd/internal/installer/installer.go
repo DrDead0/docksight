@@ -197,6 +197,10 @@ func (i *Installer) UpdateCLI(ctx context.Context, rel *release.Release) error {
 		return err
 	}
 
+	if err := i.verifyDownload(ctx, rel, asset.Name, downloaded); err != nil {
+		return err
+	}
+
 	binary := downloaded
 
 	if asset.IsArchive() {
@@ -250,6 +254,10 @@ func (i *Installer) InstallPlatform(ctx context.Context, rel *release.Release) e
 	archive := filepath.Join(workspace, asset.Name)
 
 	if err := i.Releases.Download(ctx, *asset, archive); err != nil {
+		return err
+	}
+
+	if err := i.verifyDownload(ctx, rel, asset.Name, archive); err != nil {
 		return err
 	}
 
@@ -337,6 +345,22 @@ func (i *Installer) StartStack(ctx context.Context, recreate bool) error {
 	}
 
 	return err
+}
+
+// verifyDownload checks SHA-256 against checksums.txt before the file is
+// installed. Older releases have no checksums file; that is a warning, not
+// a hard failure, so v0.1.0 still installs.
+func (i *Installer) verifyDownload(ctx context.Context, rel *release.Release, name, path string) error {
+	verified, err := i.Releases.VerifyDownloaded(ctx, rel, name, path)
+	if err != nil {
+		return err
+	}
+	if !verified {
+		i.Report.Warn("release has no checksums.txt — skipped verification for " + name)
+		return nil
+	}
+	i.Report.Success("Verified checksum for " + name)
+	return nil
 }
 
 // State returns the recorded installation.
