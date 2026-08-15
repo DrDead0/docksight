@@ -15,27 +15,22 @@ var agentPlaceholders = []struct {
 }{
 	{"uninstall", "Remove the DockSight Agent from this host"},
 	// start / stop / restart are real commands in agent_service.go
-	{"status", "Show the agent service status"},
+	// status is a real command in agent_status.go
 	{"logs", "Show the agent service logs"},
 }
 
 func init() {
-
 	for _, placeholder := range agentPlaceholders {
-
 		command := &cobra.Command{
 			Use:   placeholder.use,
 			Short: placeholder.short,
-
 			RunE: func(cmd *cobra.Command, args []string) error {
-
 				return fmt.Errorf(
 					"docksight agent %s will be ready soon",
 					cmd.Name(),
 				)
 			},
 		}
-
 		agentCMD.AddCommand(command)
 	}
 }
