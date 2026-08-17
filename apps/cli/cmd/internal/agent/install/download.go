@@ -41,6 +41,16 @@ func (i *Installer) downloadBinary(ctx context.Context, rel *release.Release) er
 		return err
 	}
 
+	verified, err := i.Releases.VerifyDownloaded(ctx, rel, asset.Name, downloaded)
+	if err != nil {
+		return err
+	}
+	if !verified {
+		i.Report.Warn("release has no checksums.txt — skipped verification for " + asset.Name)
+	} else {
+		i.Report.Success("Verified checksum for " + asset.Name)
+	}
+
 	binary := downloaded
 
 	// The pipeline may publish the agent raw or archived; both are usable.
