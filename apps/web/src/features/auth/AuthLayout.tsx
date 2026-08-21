@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react'
+import type { ReactNode } from "react";
+/** Rendered once per breakpoint — keep the wording in one place. */
+const MAINTAINER_ATTRIBUTION = "Maintained by Open Source Kigali";
 
 /**
  * Shell for the two pre-session screens (login, first-run setup).
@@ -13,9 +15,9 @@ export function AuthLayout({
   description,
   children,
 }: {
-  title: string
-  description: ReactNode
-  children: ReactNode
+  title: string;
+  description: ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="flex min-h-screen bg-background">
@@ -75,7 +77,7 @@ export function AuthLayout({
         </div>
 
         <p className="relative text-xs text-muted-foreground">
-          Open Source Kigali
+          {MAINTAINER_ATTRIBUTION}
         </p>
       </aside>
 
@@ -108,10 +110,15 @@ export function AuthLayout({
           <div className="rounded-lg border border-border bg-card p-5 shadow-sm sm:p-6">
             {children}
           </div>
+
+          {/* Below lg the brand panel is gone, so the attribution belongs here. */}
+          <p className="mt-6 text-center text-xs text-muted-foreground lg:hidden">
+            {MAINTAINER_ATTRIBUTION}
+          </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export function FormField({
@@ -120,10 +127,10 @@ export function FormField({
   hint,
   children,
 }: {
-  label: string
-  htmlFor: string
-  hint?: ReactNode
-  children: ReactNode
+  label: string;
+  htmlFor: string;
+  hint?: ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="space-y-1.5">
@@ -136,12 +143,12 @@ export function FormField({
       {children}
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
-  )
+  );
 }
 
 export function FormError({ message }: { message: string | null }) {
   if (!message) {
-    return null
+    return null;
   }
 
   return (
@@ -151,5 +158,5 @@ export function FormError({ message }: { message: string | null }) {
     >
       {message}
     </div>
-  )
+  );
 }
