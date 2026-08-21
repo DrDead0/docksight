@@ -12,7 +12,7 @@ import (
 )
 
 const (
-    defaultOwner   = "Open-Source-Kigali"
+	defaultOwner   = "Open-Source-Kigali"
 	defaultRepo    = "docksight"
 	defaultBaseURL = "https://api.github.com"
 )
@@ -129,14 +129,30 @@ func (c *Client) Download(ctx context.Context, asset Asset, destination string) 
 		return err
 	}
 
-	if _, err := io.Copy(file, response.Body); err != nil {
+	written, err := io.Copy(file, response.Body)
+	if err != nil {
 		// Never leave a truncated artifact for the extractor to find.
 		file.Close()
 		os.Remove(destination)
 		return err
 	}
 
-	return file.Close()
+	if err := file.Close(); err != nil {
+		os.Remove(destination)
+		return err
+	}
+
+	if asset.Size > 0 && written != asset.Size {
+		os.Remove(destination)
+		return fmt.Errorf(
+			"truncated download of %s: got %d bytes, expected %d",
+			asset.Name,
+			written,
+			asset.Size,
+		)
+	}
+
+	return nil
 }
 
 func (c *Client) http() *http.Client {

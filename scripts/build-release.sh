@@ -158,5 +158,10 @@ for target in $AGENT_TARGETS; do
 	echo "built $(basename "$binary")"
 done
 
+# Fingerprints so an installer can refuse a truncated or swapped asset
+# before writing it to /usr/local/bin. Published as checksums.txt.
+( cd "$OUT" && sha256sum docksight-* > checksums.txt )
+echo "built checksums.txt"
+
 echo
-echo "Upload every file above to the $VERSION GitHub release."
+echo "Upload every file above (including checksums.txt) to the $VERSION GitHub release."

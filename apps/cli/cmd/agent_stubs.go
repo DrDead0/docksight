@@ -17,6 +17,8 @@ var agentPlaceholders = []struct {
 	// start / stop / restart are real commands in agent_service.go
 	{"status", "Show the agent service status"},
 	// logs is a real command in agent_logs.go
+	// status is a real command in agent_status.go
+	{"logs", "Show the agent service logs"},
 }
 
 func init() {
