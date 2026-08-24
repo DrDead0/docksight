@@ -111,8 +111,9 @@ Rules that matter when implementing:
 1. The agent **must** send `agent.register` before anything else.
 2. The platform ignores or rejects other messages until registration succeeds.
 3. Heartbeats run every **30 seconds**.
-4. On disconnect the agent reconnects (currently after **5 seconds**) and
-   re-registers.
+4. On disconnect the agent reconnects and re-registers. The current client
+   retries with exponential backoff, a 30-second cap, and jitter, so the
+   wait before each attempt is variable.
 5. The platform may mark the agent `OFFLINE` as soon as the socket closes.
 
 ---
