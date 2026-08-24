@@ -17,9 +17,14 @@ export function useRenameHost() {
       displayName: string
     }) => renameHost(hostId, displayName),
     onSuccess: async (updated) => {
-      queryClient.setQueryData<Host[]>(hostsQueryKey, (current) =>
-        current?.map((host) => (host.id === updated.id ? { ...host, ...updated } : host)),
-      )
+      queryClient.setQueryData<Host[]>(hostsQueryKey, (current) => {
+        if (!current) {
+          return current
+        }
+        return current.map((host) =>
+          host.id === updated.id ? { ...host, ...updated } : host,
+        )
+      })
       await queryClient.invalidateQueries({ queryKey: hostsQueryKey })
       toast.push({
         tone: 'success',

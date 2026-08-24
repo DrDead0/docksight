@@ -1,7 +1,7 @@
 import { useQueries } from '@tanstack/react-query'
 import { containersQueryKey } from '@/hooks/useContainers'
 import { fetchHostContainers } from '@/services/hosts'
-import { hostDisplayName } from '@/lib/host-name'
+import { hostInventoryLabel } from '@/lib/host-name'
 import type { Container, Host } from '@/types/api'
 
 export type HostInventoryEntry = {
@@ -48,7 +48,7 @@ export function useHostInventory(hosts: Host[]) {
     (results[index]?.data?.containers ?? []).map((container) => ({
       ...container,
       hostId: host.id,
-      hostname: hostDisplayName(host),
+      hostname: hostInventoryLabel(host),
     })),
   )
 
