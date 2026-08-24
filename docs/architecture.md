@@ -274,16 +274,16 @@ stateDiagram-v2
     Registering --> Connected: agent.registered
     Registering --> Waiting: registration failed
     Connected --> Waiting: socket closed
-    Waiting --> Connecting: after 5s
+    Waiting --> Connecting: backoff
 ```
 
-The agent reconnects with a fixed **5 second** delay and re-registers each time.
+The agent reconnects with exponential backoff capped at 30 seconds, plus jitter,
+so the wait before each attempt is variable. It re-registers each time.
 Because registration is an upsert keyed by UUID, reconnecting is harmless and
 repeatable — no cleanup, no session resumption, no duplicate host records.
 
-The fixed delay is deliberate simplicity with a known limit: a thousand agents
-reconnecting after a platform restart would arrive in synchronised waves.
-Exponential backoff with jitter is on the [Roadmap](roadmap.md#agent).
+Jitter is what keeps a fleet from reconnecting in a single wave after a
+platform restart. See [Protocol](protocol.md#4-connection-lifecycle).
 
 !!! info "Containers keep running"
     A disconnected agent does not stop anything. Containers run normally; only

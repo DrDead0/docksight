@@ -129,8 +129,9 @@ never mentions the mode being wrong.
 
 Yes, in practice. The agent needs a reachable platform URL, and installation
 verification checks that it connected. You *can* install an agent first — it
-will install and then retry the connection every 5 seconds until the platform
-appears — but you lose the verification signal.
+will install and then retry the connection with exponential backoff (capped at
+30 seconds, with jitter) until the platform appears — but you lose the
+verification signal.
 
 ### The installer says `the Docker daemon is not running`
 
@@ -215,8 +216,8 @@ to reach each other.
 ### What happens when the platform goes down?
 
 Containers keep running — the agent does not stop anything. The agent retries
-every 5 seconds and re-registers when the platform returns. Only *management* is
-unavailable in the meantime.
+with exponential backoff (capped at 30 seconds, with jitter) and re-registers
+when the platform returns. Only *management* is unavailable in the meantime.
 
 ---
 

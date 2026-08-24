@@ -44,10 +44,11 @@ no port forward, and no public IP**.
 
 ---
 
-## The two deliverables
+## The three artifacts
 
-DockSight ships as two independent products, released together but installed
-separately.
+A DockSight release publishes three artifacts from one commit. They are
+installed separately; none of them is bundled inside another. See
+[Release process](release-process.md).
 
 <div class="grid cards" markdown>
 
@@ -70,12 +71,15 @@ separately.
 
     [Read more →](agent.md)
 
-</div>
+-   :material-console: **CLI**
 
-A third artifact, the **CLI** (`docksight`), installs and updates both. It is
-never bundled inside the platform archive, and the platform is never bundled
-inside the CLI — see [Release process](release-process.md) for why that
-separation is enforced.
+    The `docksight` binary that installs and updates the platform and the
+    agent. It is never inside the platform archive, and the platform is
+    never inside the CLI.
+
+    [Read more →](cli.md)
+
+</div>
 
 ---
 
