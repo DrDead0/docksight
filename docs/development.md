@@ -88,7 +88,7 @@ npm run dev:server       # NestJS, watch mode
 npm run dev:web          # Vite dev server
 ```
 
-Swagger is served at `/docs` once the server is up.
+Swagger is served at `http://localhost:3000/api/docs` once the server is up.
 
 ### Agent against a local platform
 
