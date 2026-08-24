@@ -39,12 +39,20 @@ export type Host = {
   metrics: HostMetricsResponse
 }
 
+  export type Port = {
+    PrivatePort: number
+    PublicPort: string
+    type: string
+  }
+
 export type Container = {
   id: string
   name: string
   image: string
   status: string
   state: string
+  ports:  Port[],
+  created: number
 }
 
 export type HostContainersResponse = {
@@ -64,11 +72,11 @@ export type ContainerActionResult = {
   error: string | null
 }
 
-export type ContainerPort = {
-  private: number
-  public: string
-  protocol: string
-}
+  export type ContainerPort = {
+    private: number
+    public: string
+    protocol: string
+  }
 
 export type ContainerMount = {
   source: string

@@ -181,7 +181,7 @@ export function HostDetailsPage() {
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[13px]">
             <span>{osLabel(host.os)}</span>
             <Dot />
-            <span>{host.architecture}</span>
+            <span>{host.architecture}</span>  
             <Dot />
             <span>Docker {host.version}</span>
             <Dot />

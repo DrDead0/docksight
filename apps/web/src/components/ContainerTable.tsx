@@ -23,9 +23,10 @@ import { SearchInput } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import { FilterChips } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/StatusBadge'
-import { copyToClipboard, shortId } from '@/lib/format'
+import { copyToClipboard, formatDateTime, shortId } from '@/lib/format'
 import { statusTone } from '@/lib/status'
 import type { Container, ContainerAction } from '@/types/api'
+import { Link } from 'react-router-dom'
 
 export type ContainerRow = Container & { hostId?: string; hostname?: string }
 
@@ -81,6 +82,14 @@ export function ContainerTable({
     }
     return tally
   }, [containers])
+
+  const renderPort = (ports: any[]): string => {
+    console.log("before if", ports)
+    if (!ports || ports.length === 0) return "-"
+    console.log("after if", ports)
+    return ports[0].PublicPort + ":" + ports[0].PrivatePort
+
+  }
 
   const filtered = useMemo(() => {
     const value = query.trim().toLowerCase()
@@ -193,10 +202,10 @@ export function ContainerTable({
                   <Th>Image</Th>
                   <Th>Container ID</Th>
                   <Th>
-                    Ports <MockBadge label="—" title="Ports are only in the inspect response; the list endpoint does not return them" />
+                    Ports
                   </Th>
                   <Th>
-                    Created <MockBadge label="—" title="Created timestamp is only in the inspect response; the list endpoint does not return it" />
+                    Created
                   </Th>
                   <Th>State</Th>
                   <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -267,8 +276,17 @@ export function ContainerTable({
                           </button>
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">—</td>
-                      <td className="px-4 py-3 text-muted-foreground">—</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {renderPort(container.ports) !== '-' ? (<Link target="_blank" to={`http://localhost:${container.ports[0]?.PublicPort}`} className="block hover:underline hover:text-blue-700 hover:font-bold truncate font-mono text-[13px]">
+                        {renderPort(container.ports)}
+                        </Link>) : renderPort(container.ports)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 font-mono text-[13px] text-muted-foreground">
+
+                          {formatDateTime(new Date(container.created * 1000).toISOString())}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={container.state} live={running} />
                         {container.status ? (
@@ -359,22 +377,22 @@ export function ContainerTable({
 
       {contextMenu
         ? createPortal(
-            <ContextMenu
-              x={contextMenu.x}
-              y={contextMenu.y}
-              onClose={() => setContextMenu(null)}
-            >
-              <RowMenuItems
-                container={contextMenu.container}
-                canManage={canManage}
-                onInspect={onInspect}
-                onViewLogs={onViewLogs}
-                onAction={onAction}
-                close={() => setContextMenu(null)}
-              />
-            </ContextMenu>,
-            document.body,
-          )
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            onClose={() => setContextMenu(null)}
+          >
+            <RowMenuItems
+              container={contextMenu.container}
+              canManage={canManage}
+              onInspect={onInspect}
+              onViewLogs={onViewLogs}
+              onAction={onAction}
+              close={() => setContextMenu(null)}
+            />
+          </ContextMenu>,
+          document.body,
+        )
         : null}
     </div>
   )
