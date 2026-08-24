@@ -2,6 +2,7 @@ import { ChevronDown, Server } from 'lucide-react'
 import { StatusDot } from '@/components/ui/badge'
 import { Dropdown, DropdownItem, DropdownLabel } from '@/components/ui/dropdown'
 import { statusTone } from '@/lib/status'
+import { hostDisplayName } from '@/lib/host-name'
 import type { Host } from '@/types/api'
 
 export function HostSelect({
@@ -27,7 +28,7 @@ export function HostSelect({
         >
           <Server className="h-4 w-4 text-muted-foreground" aria-hidden />
           <span className="max-w-[12rem] truncate">
-            {selected?.hostname ?? 'Select host'}
+            {selected ? hostDisplayName(selected) : 'Select host'}
           </span>
           {selected ? <StatusDot tone={statusTone(selected.status)} /> : null}
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
@@ -51,7 +52,7 @@ export function HostSelect({
                   close()
                 }}
               >
-                {host.hostname}
+                {hostDisplayName(host)}
               </DropdownItem>
             ))
           )}
