@@ -43,6 +43,8 @@ export type ContainerSummary = {
   image: string
   status: string
   state: string
+  ports: ContainerPort
+  createdAt : string
 }
 
 /**
