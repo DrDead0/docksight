@@ -72,6 +72,8 @@ func (s *Service) ListContainers(ctx context.Context) ([]Container, error) {
 			Image:  item.Image,
 			Status: item.Status,
 			State:  item.State,
+			Ports:  item.Ports,
+			Created: item.Created,
 		})
 	}
 	return result, nil

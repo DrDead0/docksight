@@ -13,6 +13,7 @@ import (
 	"docksight-agent/internal/logs"
 	"docksight-agent/internal/metrics"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/gorilla/websocket"
 )
 
@@ -72,11 +73,13 @@ type HostMetricsPayload struct {
 
 // ContainerSummary matches protocol container discovery fields.
 type ContainerSummary struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Image  string `json:"image"`
-	Status string `json:"status"`
-	State  string `json:"state"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Image      string `json:"image"`
+	Status     string `json:"status"`
+	State      string `json:"state"`
+	Ports      []container.Port `json:"ports"`
+	Created    int64 `json:"created"`
 }
 
 // ContainerListedPayload is sent on container.listed.
@@ -471,6 +474,9 @@ func (c *Client) handleContainerList(ctx context.Context, conn *websocket.Conn) 
 			Image:  item.Image,
 			Status: item.Status,
 			State:  item.State,
+			Ports:  item.Ports,
+			Created : item.Created,
+
 		})
 	}
 
