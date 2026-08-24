@@ -193,7 +193,7 @@ The CLI version, commit, and UTC build date are stamped at build time with
 
 ```console
 $ docksight status
-→ Docksight status: all active
+→ DockSight status: all active
 ```
 
 !!! warning "Placeholder"
