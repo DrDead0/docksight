@@ -1,5 +1,22 @@
-import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { Roles } from '../auth/roles.decorator';
+import { UpdateHostDto } from './dto/update-host.dto';
 import { HostsService } from './hosts.service';
 
 @ApiTags('hosts')
@@ -12,6 +29,28 @@ export class HostsController {
   @ApiOkResponse({ description: 'Registered hosts' })
   listHosts() {
     return this.hostsService.listHosts();
+  }
+
+  @Patch(':id')
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a host display name' })
+  @ApiBody({ type: UpdateHostDto })
+  @ApiOkResponse({ description: 'Updated host' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid token' })
+  @ApiForbiddenResponse({ description: 'Requires the ADMIN role' })
+  async updateDisplayName(
+    @Param('id') id: string,
+    @Body() body: UpdateHostDto,
+  ) {
+    const result = await this.hostsService.updateDisplayName(
+      id,
+      body.displayName,
+    );
+    if (!result) {
+      throw new NotFoundException(`Host not found: ${id}`);
+    }
+    return result;
   }
 
   @Get(':id/metrics')
