@@ -122,7 +122,7 @@ Agent                                 Server
 1. After the WebSocket opens, the agent MUST send `agent.register` before other domain messages.
 2. The server SHOULD reject or ignore non-registration messages until registration succeeds (v0.1: only register + heartbeat are implemented).
 3. Heartbeats MUST be sent every **30 seconds** while connected.
-4. On disconnect, the agent MUST reconnect with backoff (current client default: 5s) and re-register.
+4. On disconnect, the agent MUST reconnect and re-register. The current client retries with exponential backoff, a 30-second cap, and jitter, so the wait before each attempt is variable.
 5. On disconnect, the server MAY mark the agent `OFFLINE`.
 
 ---
