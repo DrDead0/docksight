@@ -1,13 +1,16 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowUpRight,
   Cpu,
   MemoryStick,
   MoreHorizontal,
+  Pencil,
   PlugZap,
   RefreshCw,
 } from 'lucide-react'
 import { OsIcon } from '@/components/OsIcon'
+import { RenameHostDialog } from '@/components/RenameHostDialog'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Meter } from '@/components/charts/Sparkline'
 import { MockBadge } from '@/components/ui/badge'
@@ -15,8 +18,10 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/dropdown'
 import { formatBytes, formatRelativeTime, osLabel } from '@/lib/format'
+import { hostDisplayName } from '@/lib/host-name'
 import { isStale, toHostResources } from '@/lib/metrics'
 import { cn } from '@/lib/utils'
+import { useIsAdmin } from '@/stores/auth'
 import type { Host } from '@/types/api'
 
 type HostCardProps = {
@@ -36,6 +41,9 @@ export function HostCard({
   onRefresh,
 }: HostCardProps) {
   const navigate = useNavigate()
+  const isAdmin = useIsAdmin()
+  const [renaming, setRenaming] = useState(false)
+  const label = hostDisplayName(host)
   // Pushed by the agent on `metrics.host` and embedded in the /hosts response,
   // so the card needs no extra request.
   const resources = toHostResources(host.metrics)
@@ -55,10 +63,10 @@ export function HostCard({
             <OsIcon os={host.os} className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <p className="truncate font-semibold tracking-tight">
-              {host.hostname}
-            </p>
+            <p className="truncate font-semibold tracking-tight">{label}</p>
             <p className="truncate text-xs text-muted-foreground">
+              {host.hostname}
+              {' · '}
               {osLabel(host.os)} · {host.architecture} · Docker {host.version}
             </p>
           </div>
@@ -71,7 +79,7 @@ export function HostCard({
               <button
                 type="button"
                 {...aria}
-                aria-label={`Actions for ${host.hostname}`}
+                aria-label={`Actions for ${label}`}
                 onClick={(event) => {
                   event.stopPropagation()
                   toggle()
@@ -102,6 +110,17 @@ export function HostCard({
                 >
                   Refresh inventory
                 </DropdownItem>
+                {isAdmin ? (
+                  <DropdownItem
+                    icon={<Pencil className="h-4 w-4" />}
+                    onSelect={() => {
+                      setRenaming(true)
+                      close()
+                    }}
+                  >
+                    Rename
+                  </DropdownItem>
+                ) : null}
                 <DropdownSeparator />
                 <DropdownItem
                   icon={<PlugZap className="h-4 w-4" />}
@@ -218,6 +237,10 @@ export function HostCard({
           Disconnect
         </Button>
       </div>
+
+      {isAdmin && renaming ? (
+        <RenameHostDialog host={host} onClose={() => setRenaming(false)} />
+      ) : null}
     </Card>
   )
 }

@@ -11,6 +11,7 @@ import { FilterChips } from '@/components/ui/tabs'
 import { StatusDot } from '@/components/ui/badge'
 import { useHostInventory } from '@/hooks/useHostInventory'
 import { useHosts } from '@/hooks/useHosts'
+import { hostDisplayName } from '@/lib/host-name'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
 type HostFilter = 'all' | 'online' | 'offline'
@@ -44,6 +45,7 @@ export function HostsPage() {
       return true
     }
     return (
+      hostDisplayName(host).toLowerCase().includes(value) ||
       host.hostname.toLowerCase().includes(value) ||
       host.os.toLowerCase().includes(value) ||
       host.architecture.toLowerCase().includes(value) ||

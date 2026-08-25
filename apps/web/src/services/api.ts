@@ -51,7 +51,7 @@ type RequestOptions = {
 }
 
 async function request<T>(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PATCH',
   path: string,
   body?: unknown,
   options: RequestOptions = {},
@@ -111,7 +111,16 @@ export async function apiPost<T>(
   return request<T>('POST', path, body ?? {}, options)
 }
 
+export async function apiPatch<T>(
+  path: string,
+  body?: unknown,
+  options?: RequestOptions,
+): Promise<T> {
+  return request<T>('PATCH', path, body ?? {}, options)
+}
+
 export const apiClient = {
   get: apiGet,
   post: apiPost,
+  patch: apiPatch,
 }

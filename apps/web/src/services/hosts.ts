@@ -12,6 +12,12 @@ export function fetchHosts(): Promise<Host[]> {
   return apiClient.get<Host[]>('/hosts')
 }
 
+export function renameHost(hostId: string, displayName: string): Promise<Host> {
+  return apiClient.patch<Host>(`/hosts/${encodeURIComponent(hostId)}`, {
+    displayName,
+  })
+}
+
 export function fetchHostMetrics(hostId: string): Promise<HostMetricsResponse> {
   return apiClient.get<HostMetricsResponse>(`/hosts/${hostId}/metrics`)
 }

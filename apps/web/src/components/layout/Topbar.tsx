@@ -20,6 +20,7 @@ import {
   DropdownSeparator,
 } from '@/components/ui/dropdown'
 import { useHosts } from '@/hooks/useHosts'
+import { hostDisplayName } from '@/lib/host-name'
 import { MOCK_NOTIFICATIONS, MOCK_WORKSPACE } from '@/lib/mock'
 import { initialsFor } from '@/lib/format'
 import { statusTone } from '@/lib/status'
@@ -68,6 +69,7 @@ function GlobalSearch() {
     return (hostsQuery.data ?? [])
       .filter(
         (host) =>
+          hostDisplayName(host).toLowerCase().includes(value) ||
           host.hostname.toLowerCase().includes(value) ||
           host.os.toLowerCase().includes(value) ||
           host.uuid.toLowerCase().includes(value),
@@ -143,10 +145,10 @@ function GlobalSearch() {
                 <Server className="h-4 w-4 text-muted-foreground" aria-hidden />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">
-                    {host.hostname}
+                    {hostDisplayName(host)}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {host.os} · {host.architecture}
+                    {host.hostname} · {host.os} · {host.architecture}
                   </span>
                 </span>
                 <StatusDot tone={statusTone(host.status)} />

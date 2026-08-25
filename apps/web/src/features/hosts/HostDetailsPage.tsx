@@ -54,6 +54,7 @@ import {
   formatRelativeTime,
   osLabel,
 } from '@/lib/format'
+import { hostDisplayName } from '@/lib/host-name'
 import type { HostResources } from '@/lib/metrics'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 
@@ -83,7 +84,8 @@ export function HostDetailsPage() {
 
   const hostsQuery = useHosts()
   const host = hostsQuery.data?.find((entry) => entry.id === hostId)
-  useDocumentTitle(host?.hostname ?? (hostsQuery.isLoading ? 'Host' : 'Host not found'))
+  const hostLabel = host ? hostDisplayName(host) : undefined
+  useDocumentTitle(hostLabel ?? (hostsQuery.isLoading ? 'Host' : 'Host not found'))
   const containersQuery = useContainers(hostId)
   const containers = containersQuery.data?.containers ?? []
   const { resources } = useHostMetrics(hostId)
@@ -155,6 +157,7 @@ export function HostDetailsPage() {
   }
 
   const refreshing = hostsQuery.isFetching || containersQuery.isFetching
+  const label = hostDisplayName(host)
 
   return (
     <PageContainer>
@@ -165,7 +168,7 @@ export function HostDetailsPage() {
               Hosts
             </Link>
             <ChevronRight className="h-3 w-3" aria-hidden />
-            <span className="text-foreground">{host.hostname}</span>
+            <span className="text-foreground">{label}</span>
           </nav>
         }
         title={
@@ -173,12 +176,14 @@ export function HostDetailsPage() {
             <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card">
               <OsIcon os={host.os} className="h-5 w-5" />
             </span>
-            {host.hostname}
+            {label}
             <StatusBadge status={host.status} />
           </span>
         }
         description={
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[13px]">
+            <span>{host.hostname}</span>
+            <Dot />
             <span>{osLabel(host.os)}</span>
             <Dot />
             <span>{host.architecture}</span>  
@@ -253,7 +258,7 @@ export function HostDetailsPage() {
             onAction={commands.run}
             onInspect={setInspecting}
             onViewLogs={setViewingLogs}
-            emptyDescription={`${host.hostname} has no containers. Anything the Docker daemon reports will appear here within 20 seconds.`}
+            emptyDescription={`${label} has no containers. Anything the Docker daemon reports will appear here within 20 seconds.`}
           />
         )
       ) : null}
@@ -363,6 +368,7 @@ function OverviewTab({
           <CardContent>
             <DataList
               items={[
+                { label: 'Display name', value: hostDisplayName(host) },
                 { label: 'Hostname', value: host.hostname },
                 { label: 'Agent UUID', value: host.uuid, mono: true, copy: host.uuid },
                 { label: 'Operating system', value: osLabel(host.os) },

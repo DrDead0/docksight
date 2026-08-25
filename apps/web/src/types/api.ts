@@ -31,6 +31,8 @@ export type Host = {
   id: string
   uuid: string
   hostname: string
+  /** Operator label from the API; omitted or equal to hostname on older servers. */
+  displayName?: string
   os: string
   architecture: string
   version: string
