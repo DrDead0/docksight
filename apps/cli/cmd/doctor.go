@@ -18,8 +18,8 @@ var doctorCMD = &cobra.Command{
 		"on the host. Exits non-zero if any check fails, so it is safe to use " +
 		"in scripts (`docksight doctor && ...`).\n\n" +
 		"By default this validates the platform install requirements. Pass " +
-		"--agent to validate agent install requirements instead (systemd and " +
-		"outbound connectivity in addition to Docker).\n\n" +
+		"--agent to validate agent install requirements instead (service manager " +
+		"and outbound connectivity in addition to Docker).\n\n" +
 		"Unlike install, doctor reports every failing check rather than " +
 		"stopping at the first one.",
 
@@ -54,7 +54,7 @@ func init() {
 		&doctorAgent,
 		"agent",
 		false,
-		"run agent install checks (systemd + connectivity) instead of platform checks",
+		"run agent install checks (service manager + connectivity) instead of platform checks",
 	)
 	rootCmd.AddCommand(doctorCMD)
 }
