@@ -35,6 +35,7 @@ export class AgentsService {
         version: payload.version,
         status: AgentStatus.ONLINE,
         lastSeen: now,
+        // displayName is operator-set and must survive re-registration
       },
     });
 
@@ -75,6 +76,21 @@ export class AgentsService {
     } catch {
       // Agent may not exist yet if disconnect happens before registration.
     }
+  }
+
+  async updateDisplayName(
+    id: string,
+    displayName: string,
+  ): Promise<Agent | null> {
+    const existing = await this.findById(id);
+    if (!existing) {
+      return null;
+    }
+
+    return this.prisma.agent.update({
+      where: { id },
+      data: { displayName },
+    });
   }
 
   findByUuid(uuid: string): Promise<Agent | null> {

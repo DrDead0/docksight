@@ -23,6 +23,8 @@ model Agent {
   id           String      @id @default(cuid())
   uuid         String      @unique
   hostname     String
+  /// Operator-set dashboard label. Null until an admin names the host.
+  displayName  String?
   os           String
   architecture String
   version      String

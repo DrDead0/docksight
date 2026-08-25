@@ -4,6 +4,7 @@ import type {
   HostCpuMetrics,
   HostMemoryMetrics,
 } from '@docksight/protocol';
+import type { Agent } from '../../generated/prisma/client';
 import { AgentsGateway } from '../agents/agents.gateway';
 import { AgentsService } from '../agents/agents.service';
 import { ContainerInventoryService } from '../agents/container-inventory.service';
@@ -24,6 +25,8 @@ export type HostDto = {
   id: string;
   uuid: string;
   hostname: string;
+  /** Operator label, or hostname when none has been set. */
+  displayName: string;
   os: string;
   architecture: string;
   version: string;
@@ -59,17 +62,25 @@ export class HostsService {
       this.hostMetrics.rememberHost(agent.id, agent.uuid);
     }
 
-    return agents.map((agent) => ({
-      id: agent.id,
-      uuid: agent.uuid,
-      hostname: agent.hostname,
-      os: agent.os,
-      architecture: agent.architecture,
-      version: agent.version,
-      status: agent.status,
-      lastSeen: agent.lastSeen ? agent.lastSeen.toISOString() : null,
-      metrics: toMetricsDto(agent.id, this.hostMetrics.getByHostId(agent.id)),
-    }));
+    return agents.map((agent) =>
+      toHostDto(agent, this.hostMetrics.getByHostId(agent.id)),
+    );
+  }
+
+  async updateDisplayName(
+    hostId: string,
+    displayName: string,
+  ): Promise<HostDto | null> {
+    const updated = await this.agentsService.updateDisplayName(
+      hostId,
+      displayName,
+    );
+    if (!updated) {
+      return null;
+    }
+
+    this.hostMetrics.rememberHost(updated.id, updated.uuid);
+    return toHostDto(updated, this.hostMetrics.getByHostId(updated.id));
   }
 
   /**
@@ -107,6 +118,24 @@ export class HostsService {
       updatedAt: snapshot?.updatedAt ? snapshot.updatedAt.toISOString() : null,
     };
   }
+}
+
+function toHostDto(
+  agent: Agent,
+  snapshot: HostMetricsSnapshot | null,
+): HostDto {
+  return {
+    id: agent.id,
+    uuid: agent.uuid,
+    hostname: agent.hostname,
+    displayName: agent.displayName?.trim() || agent.hostname,
+    os: agent.os,
+    architecture: agent.architecture,
+    version: agent.version,
+    status: agent.status,
+    lastSeen: agent.lastSeen ? agent.lastSeen.toISOString() : null,
+    metrics: toMetricsDto(agent.id, snapshot),
+  };
 }
 
 function toMetricsDto(
