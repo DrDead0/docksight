@@ -39,7 +39,7 @@ re-running an install is the supported way to upgrade.
 
 !!! warning "macOS is not supported"
     Both installers reject it at validation:
-    `DockSight installs on linux and windows, this host runs darwin`.
+    `DockSight installs on Linux and Windows; this host runs Darwin.`
 
 The installer verifies all of this before writing anything. If a requirement is
 missing it stops at validation, leaving the host untouched.

@@ -105,7 +105,7 @@ POSTGRES_DB=docksight
 POSTGRES_USER=docksight
 POSTGRES_PASSWORD=L09NY5hFMQW8bE55EoN90_oCSy1F527O4uqc1KwjlWmlFtgLkEZHsGyl63wTp465
 POSTGRES_PORT=5432
-REDIS_PORT=6371
+REDIS_PORT=6379
 JWT_SECRET=uhgI06kyo5Hti2lKtd9WLy2E7Fpblm3zs5FNvUJb7zVYTunMTCGL6erYDp_2NCQc
 ```
 
@@ -224,7 +224,7 @@ Settings live in `/opt/docksight/.env` and are read by Compose at start.
 | `POSTGRES_USER` | `docksight` | Database role |
 | `POSTGRES_PASSWORD` | generated | Database password |
 | `POSTGRES_PORT` | `5432` | Internal Postgres port |
-| `REDIS_PORT` | `6371` | Internal Redis port |
+| `REDIS_PORT` | `6379` | Host port published to Redis (container listens on 6379) |
 | `JWT_SECRET` | generated | Token signing key |
 | `JWT_EXPIRES_IN` | `12h` | Token lifetime |
 
