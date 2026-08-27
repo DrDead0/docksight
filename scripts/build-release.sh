@@ -60,16 +60,23 @@ COMPOSE="$BUNDLE/dockersight-installation.yml"
 # message never says capitals are the problem — so catch it here, where the
 # fix is obvious, rather than on an operator's host.
 #
-# Every check runs before the first write below, so a build that fails
-# validation leaves the working tree exactly as it was found. This script
-# edits tracked files, and a half-stamped bundle left behind by a failed run
-# is a confusing thing to find in `git status`.
+# Keep validation against the committed bundle. The release-specific changes
+# below are made in a temporary copy so a local build never dirties tracked
+# files or leaves a half-stamped bundle behind after a failed run.
 if grep -nE '^[[:space:]]*image:.*[A-Z]' "$COMPOSE"; then
 	echo "the lines above carry an uppercase image reference, which Docker will reject" >&2
 	exit 1
 fi
 
-printf '%s\n' "$VERSION" >"$BUNDLE/VERSION"
+# Stage the platform bundle outside the repository. The archive keeps the
+# top-level bundle/ directory expected by the installer.
+STAGE="$(mktemp -d)"
+trap 'rm -rf "$STAGE"' EXIT
+cp -R "$BUNDLE" "$STAGE/bundle"
+STAGED_BUNDLE="$STAGE/bundle"
+COMPOSE="$STAGED_BUNDLE/dockersight-installation.yml"
+
+printf '%s\n' "$VERSION" >"$STAGED_BUNDLE/VERSION"
 
 # Stamp the image tags to match the release.
 #
@@ -87,7 +94,7 @@ done
 PLATFORM="$OUT/docksight-platform-$VERSION.tar.gz"
 
 # Archived with a top-level bundle/ directory, which the installer strips.
-tar -czf "$PLATFORM" -C "$ROOT" bundle
+tar -czf "$PLATFORM" -C "$STAGE" bundle
 
 echo "built $(basename "$PLATFORM")"
 
