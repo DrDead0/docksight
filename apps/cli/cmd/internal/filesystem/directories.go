@@ -11,7 +11,6 @@ func TempWorkspace() (string, error) {
 	return os.MkdirTemp("", "docksight-")
 }
 
-
 func CreateDirectories(
 	installationDir string,
 	dataDir string,

@@ -16,7 +16,7 @@ type fakeEngine struct {
 
 type fakeReader struct {
 	io.Reader
-	closed bool
+	closed  bool
 	closeCh chan struct{}
 }
 

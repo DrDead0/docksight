@@ -15,13 +15,13 @@ type Info struct {
 
 // Container is a read-only discovery summary.
 type Container struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Image      string `json:"image"`
-	Status     string `json:"status"`
-	State      string `json:"state"`
-	Ports      []container.Port `json:"ports"`
-	Created    int64 `json:"createdAt"`
+	ID      string           `json:"id"`
+	Name    string           `json:"name"`
+	Image   string           `json:"image"`
+	Status  string           `json:"status"`
+	State   string           `json:"state"`
+	Ports   []container.Port `json:"ports"`
+	Created int64            `json:"createdAt"`
 }
 type Port struct {
 	Private  int    `json:"private"`
@@ -64,5 +64,4 @@ type ContainerInspect struct {
 	RestartPolicy string    `json:"restartPolicy"`
 	Entrypoint    []string  `json:"entrypoint"`
 	Env           []string  `json:"env"`
-	
 }
