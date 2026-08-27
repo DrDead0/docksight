@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   ContainerSummary,
   HostCpuMetrics,
@@ -52,7 +52,7 @@ export class HostsService {
     private readonly inventory: ContainerInventoryService,
     private readonly agentsGateway: AgentsGateway,
     private readonly hostMetrics: HostMetricsService,
-  ) {}
+  ) { }
 
   async listHosts(): Promise<HostDto[]> {
     const agents = await this.agentsService.findAll();
@@ -117,6 +117,33 @@ export class HostsService {
       containers,
       updatedAt: snapshot?.updatedAt ? snapshot.updatedAt.toISOString() : null,
     };
+  }
+
+  /**
+   * Enforces business rules for deleting a host:
+   * - Cannot be missing
+   * - Cannot be currently ONLINE
+   * - Must have been inactive for at least 7 days
+   */
+  async deleteHost(hostId: string): Promise<void> {
+    const agent = await this.agentsService.findById(hostId);
+    if (!agent) {
+      throw new NotFoundException(`Host not found: ${hostId}`);
+    }
+
+    if (agent.status === 'ONLINE') {
+      throw new ConflictException('Cannot delete an active host');
+    }
+
+    const lastSeenDate = agent.lastSeen || agent.createdAt;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    if (lastSeenDate > sevenDaysAgo) {
+      throw new ConflictException('Host must be inactive for at least 7 days');
+    }
+
+    await this.agentsService.delete(agent.id);
   }
 }
 

@@ -1,3 +1,4 @@
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { AgentsService } from '../agents/agents.service';
 import { AgentsGateway } from '../agents/agents.gateway';
 import { ContainerInventoryService } from '../agents/container-inventory.service';
@@ -81,5 +82,74 @@ describe('HostsService', () => {
     await expect(
       service.updateDisplayName('missing', 'prod-web-1'),
     ).resolves.toBeNull();
+  });
+
+  describe('deleteHost', () => {
+    it('throws NotFoundException if host does not exist', async () => {
+      const service = makeService({
+        findById: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(service.deleteHost('missing')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('throws ConflictException if host is ONLINE', async () => {
+      const service = makeService({
+        findById: jest.fn().mockResolvedValue(makeAgent({ status: 'ONLINE' })),
+      });
+
+      await expect(service.deleteHost('host-1')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('throws ConflictException if host is OFFLINE but lastSeen is < 7 days ago', async () => {
+      const fourDaysAgo = new Date();
+      fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+
+      const service = makeService({
+        findById: jest.fn().mockResolvedValue(
+          makeAgent({ status: 'OFFLINE', lastSeen: fourDaysAgo }),
+        ),
+      });
+
+      await expect(service.deleteHost('host-1')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('deletes the host if OFFLINE and lastSeen is > 7 days ago', async () => {
+      const eightDaysAgo = new Date();
+      eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+      const deleteMock = jest.fn();
+
+      const service = makeService({
+        findById: jest.fn().mockResolvedValue(
+          makeAgent({ status: 'OFFLINE', lastSeen: eightDaysAgo }),
+        ),
+        delete: deleteMock,
+      });
+
+      await service.deleteHost('host-1');
+      expect(deleteMock).toHaveBeenCalledWith('host-1');
+    });
+
+    it('falls back to createdAt if lastSeen is null and deletes if > 7 days ago', async () => {
+      const eightDaysAgo = new Date();
+      eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+      const deleteMock = jest.fn();
+
+      const service = makeService({
+        findById: jest.fn().mockResolvedValue(
+          makeAgent({ status: 'OFFLINE', lastSeen: null, createdAt: eightDaysAgo }),
+        ),
+        delete: deleteMock,
+      });
+
+      await service.deleteHost('host-1');
+      expect(deleteMock).toHaveBeenCalledWith('host-1');
+    });
   });
 });

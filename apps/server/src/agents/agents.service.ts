@@ -10,7 +10,7 @@ import { PrismaService } from '../common/database/prisma.service';
 export class AgentsService {
   private readonly logger = new Logger(AgentsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async register(
     payload: AgentRegisterPayload,
@@ -103,5 +103,13 @@ export class AgentsService {
 
   findAll(): Promise<Agent[]> {
     return this.prisma.agent.findMany({ orderBy: { createdAt: 'desc' } });
+  }
+
+  /**
+   * Permanently removes the agent record from the database.
+   */
+  async delete(id: string): Promise<void> {
+    await this.prisma.agent.delete({ where: { id } });
+    this.logger.log(`Agent deleted id=${id}`);
   }
 }
