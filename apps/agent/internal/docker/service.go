@@ -67,12 +67,12 @@ func (s *Service) ListContainers(ctx context.Context) ([]Container, error) {
 			name = strings.TrimPrefix(item.Names[0], "/")
 		}
 		result = append(result, Container{
-			ID:     item.ID,
-			Name:   name,
-			Image:  item.Image,
-			Status: item.Status,
-			State:  item.State,
-			Ports:  item.Ports,
+			ID:      item.ID,
+			Name:    name,
+			Image:   item.Image,
+			Status:  item.Status,
+			State:   item.State,
+			Ports:   item.Ports,
 			Created: item.Created,
 		})
 	}
@@ -248,7 +248,6 @@ func mapContainerInspect(container types.ContainerJSON) *ContainerInspect {
 		RestartPolicy: string(container.HostConfig.RestartPolicy.Name),
 		Entrypoint:    container.Config.Entrypoint,
 		Env:           container.Config.Env,
-		
 	}
 }
 
