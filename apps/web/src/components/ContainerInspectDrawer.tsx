@@ -7,6 +7,7 @@ import {
   RotateCcw,
   ScrollText,
   Square,
+  Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -140,6 +141,18 @@ export function ContainerInspectDrawer({
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden />
             Restart
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="danger"
+            className="ml-2"
+            title={canManage ? undefined : NEEDS_ADMIN}
+            disabled={rowBusy || !onAction || !canManage}
+            onClick={() => onAction?.(container, 'remove')}
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            Delete
           </Button>
           <div className="ml-auto flex items-center gap-2">
             <CopyButton
