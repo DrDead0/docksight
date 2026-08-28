@@ -267,3 +267,15 @@ func (s *Service) InspectContainer(ctx context.Context, containerID string) (*Co
 	}
 	return mapContainerInspect(containerJSON), nil
 }
+
+// RemoveContainer removes a container. Without force, Docker refuses to remove
+// one that is running.
+func (s *Service) RemoveContainer(ctx context.Context, containerID string, force bool) error {
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	if err := s.client.sdk.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: force}); err != nil {
+		return fmt.Errorf("docker remove %s: %w", shortID(containerID), err)
+	}
+	return nil
+}

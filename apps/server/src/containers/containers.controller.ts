@@ -23,9 +23,9 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { Observable, finalize } from 'rxjs';
-import type { LogsChunkPayload } from '@docksight/protocol';
+import type { ContainerAction, LogsChunkPayload } from '@docksight/protocol';
 import { Roles } from '../auth/roles.decorator';
 import { ContainersService } from './containers.service';
 
@@ -34,6 +34,17 @@ class ContainerActionBodyDto {
   @IsString()
   @IsNotEmpty()
   hostId!: string;
+}
+
+class ContainerRemoveBodyDto extends ContainerActionBodyDto {
+  @ApiProperty({
+    required: false,
+    default: false,
+    description: 'Remove a running container by killing it first',
+  })
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }
 
 @ApiTags('containers')
@@ -110,6 +121,21 @@ export class ContainersController {
     @Body() body: ContainerActionBodyDto,
   ) {
     return this.runAction(containerId, body.hostId, 'restart');
+  }
+
+  @Post(':id/remove')
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove a container on a host' })
+  @ApiBody({ type: ContainerRemoveBodyDto })
+  @ApiOkResponse({ description: 'Lifecycle command result' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid token' })
+  @ApiForbiddenResponse({ description: 'Requires the ADMIN role' })
+  remove(
+    @Param('id') containerId: string,
+    @Body() body: ContainerRemoveBodyDto,
+  ) {
+    return this.runAction(containerId, body.hostId, 'remove', body.force);
   }
 
   @Sse(':id/logs')
@@ -194,13 +220,15 @@ export class ContainersController {
   private async runAction(
     containerId: string,
     hostId: string,
-    action: 'start' | 'stop' | 'restart',
+    action: ContainerAction,
+    force = false,
   ) {
     try {
       return await this.containersService.runLifecycleAction(
         hostId,
         containerId,
         action,
+        force,
       );
     } catch (error) {
       this.mapAndThrow(error, 'Container action failed');

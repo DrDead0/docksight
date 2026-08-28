@@ -60,9 +60,7 @@ async function bootstrap() {
  * - production, unset → false (same-origin only; no reflected Origin)
  * - development, unset → Vite dev server defaults
  */
-function resolveCorsOrigin(
-  config: ConfigService,
-): boolean | string[] {
+function resolveCorsOrigin(config: ConfigService): boolean | string[] {
   const configured = config.get<string>('CORS_ORIGINS');
   if (configured != null && configured.trim() !== '') {
     return configured

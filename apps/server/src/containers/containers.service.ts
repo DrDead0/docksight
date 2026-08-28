@@ -19,6 +19,7 @@ export class ContainersService {
     hostId: string,
     containerId: string,
     action: ContainerAction,
+    force = false,
   ): Promise<ContainerResultPayload> {
     if (!hostId?.trim()) {
       throw new Error('hostId is required');
@@ -37,6 +38,7 @@ export class ContainersService {
       agent.id,
       action,
       containerId,
+      force,
     );
   }
 

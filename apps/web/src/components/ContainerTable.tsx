@@ -11,7 +11,7 @@ import {
   Square,
   Trash2,
 } from 'lucide-react'
-import { StatusDot, MockBadge } from '@/components/ui/badge'
+import { StatusDot } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dropdown,
@@ -495,15 +495,17 @@ function RowMenuItems({
         Copy image
       </DropdownItem>
       <DropdownSeparator />
-      <DropdownItem icon={<Trash2 className="h-4 w-4" />} destructive disabled>
+      <DropdownItem
+        icon={<Trash2 className="h-4 w-4" />}
+        destructive
+        disabled={!onAction || !canManage}
+        onSelect={() => {
+          onAction?.(container, 'remove')
+          close()
+        }}
+      >
         Delete
       </DropdownItem>
-      <div className="px-2.5 pb-1">
-        <MockBadge
-          label="Delete: not implemented"
-          title="No container.remove message in the agent protocol yet"
-        />
-      </div>
     </>
   )
 }

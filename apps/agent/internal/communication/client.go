@@ -27,6 +27,7 @@ const (
 	TypeContainerInspected = "container.inspected"
 	TypeContainerStart     = "container.start"
 	TypeContainerStop      = "container.stop"
+	TypeContainerRemove    = "container.remove"
 	TypeContainerRestart   = "container.restart"
 	TypeContainerResult    = "container.result"
 	TypeLogsSubscribe      = "logs.subscribe"
@@ -73,13 +74,13 @@ type HostMetricsPayload struct {
 
 // ContainerSummary matches protocol container discovery fields.
 type ContainerSummary struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Image      string `json:"image"`
-	Status     string `json:"status"`
-	State      string `json:"state"`
-	Ports      []container.Port `json:"ports"`
-	Created    int64 `json:"created"`
+	ID      string           `json:"id"`
+	Name    string           `json:"name"`
+	Image   string           `json:"image"`
+	Status  string           `json:"status"`
+	State   string           `json:"state"`
+	Ports   []container.Port `json:"ports"`
+	Created int64            `json:"created"`
 }
 
 // ContainerListedPayload is sent on container.listed.
@@ -92,6 +93,11 @@ type ContainerInspectedPayload struct {
 	Container *docker.ContainerInspect `json:"container"`
 	Ok        bool                     `json:"ok"`
 	Error     *string                  `json:"error"`
+}
+
+type ContainerRemovePayload struct {
+	ContainerCommandPayload
+	Force bool `json:"force"`
 }
 
 // ContainerCommandPayload is shared by start/stop/restart.
@@ -382,6 +388,8 @@ func (c *Client) serve(ctx context.Context, conn *websocket.Conn) error {
 				logger.Warn("host metrics not sent", "error", err.Error())
 			}
 		}
+		
+
 	}
 }
 
@@ -389,7 +397,7 @@ func (c *Client) handleServerMessage(ctx context.Context, conn *websocket.Conn, 
 	switch env.Type {
 	case TypeContainerList:
 		return c.handleContainerList(ctx, conn)
-	case TypeContainerStart, TypeContainerStop, TypeContainerRestart:
+	case TypeContainerStart, TypeContainerStop, TypeContainerRestart, TypeContainerRemove:
 		return c.handleContainerCommand(ctx, conn, env)
 	case TypeLogsSubscribe:
 		return c.handleLogsSubscribe(env)
@@ -469,14 +477,13 @@ func (c *Client) handleContainerList(ctx context.Context, conn *websocket.Conn) 
 	summaries := make([]ContainerSummary, 0, len(items))
 	for _, item := range items {
 		summaries = append(summaries, ContainerSummary{
-			ID:     item.ID,
-			Name:   item.Name,
-			Image:  item.Image,
-			Status: item.Status,
-			State:  item.State,
-			Ports:  item.Ports,
-			Created : item.Created,
-
+			ID:      item.ID,
+			Name:    item.Name,
+			Image:   item.Image,
+			Status:  item.Status,
+			State:   item.State,
+			Ports:   item.Ports,
+			Created: item.Created,
 		})
 	}
 
@@ -485,7 +492,7 @@ func (c *Client) handleContainerList(ctx context.Context, conn *websocket.Conn) 
 }
 
 func (c *Client) handleContainerCommand(ctx context.Context, conn *websocket.Conn, env Envelope) error {
-	var payload ContainerCommandPayload
+	var payload ContainerRemovePayload
 	if err := json.Unmarshal(env.Payload, &payload); err != nil {
 		return fmt.Errorf("parse container command: %w", err)
 	}
@@ -526,6 +533,8 @@ func (c *Client) handleContainerCommand(ctx context.Context, conn *websocket.Con
 		err = c.docker.StopContainer(ctx, payload.ContainerID)
 	case TypeContainerRestart:
 		err = c.docker.RestartContainer(ctx, payload.ContainerID)
+	case TypeContainerRemove:
+		err = c.docker.RemoveContainer(ctx, payload.ContainerID, payload.Force)
 	default:
 		err = fmt.Errorf("unsupported action %s", env.Type)
 	}
@@ -650,6 +659,8 @@ func actionFromType(msgType string) string {
 		return "stop"
 	case TypeContainerRestart:
 		return "restart"
+	case TypeContainerRemove:
+		return "remove"
 	default:
 		return "unknown"
 	}
