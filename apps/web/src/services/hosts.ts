@@ -32,10 +32,13 @@ export function runContainerAction(
   containerId: string,
   hostId: string,
   action: ContainerAction,
+  force = false,
 ): Promise<ContainerActionResult> {
   return apiClient.post<ContainerActionResult>(
     `/containers/${encodeURIComponent(containerId)}/${action}`,
-    { hostId },
+    // Only container.remove accepts `force`; the other routes reject unknown
+    // body properties, so it is omitted entirely for them.
+    action === 'remove' ? { hostId, force } : { hostId },
   )
 }
 

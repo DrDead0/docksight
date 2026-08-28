@@ -12,6 +12,7 @@ export const CONTAINER_MESSAGE_TYPE = {
   CONTAINER_STOP: 'container.stop',
   CONTAINER_RESTART: 'container.restart',
   CONTAINER_RESULT: 'container.result',
+  CONTAINER_REMOVE: 'container.remove'
 } as const
 
 export type ContainerMessageType =
@@ -25,6 +26,7 @@ export const CONTAINER_START = CONTAINER_MESSAGE_TYPE.CONTAINER_START
 export const CONTAINER_STOP = CONTAINER_MESSAGE_TYPE.CONTAINER_STOP
 export const CONTAINER_RESTART = CONTAINER_MESSAGE_TYPE.CONTAINER_RESTART
 export const CONTAINER_RESULT = CONTAINER_MESSAGE_TYPE.CONTAINER_RESULT
+export const CONTAINER_REMOVE = CONTAINER_MESSAGE_TYPE.CONTAINER_REMOVE
 
 /**
  * Payload for `container.list` (Server -> Agent).
@@ -99,7 +101,7 @@ export type ContainerInspect = {
 /**
  * Lifecycle actions that produce `container.result`.
  */
-export type ContainerAction = 'start' | 'stop' | 'restart'
+export type ContainerAction = 'start' | 'stop' | 'restart' | "remove"
 
 /**
  * Shared command payload for container operations (Server -> Agent).
@@ -108,6 +110,15 @@ export type ContainerCommandPayload = {
   requestId: string
   containerId: string
 }
+
+/**
+ * Payload for `container.remove` (Server -> Agent).
+
+ */
+export type ContainerRemovePayload = ContainerCommandPayload & {
+  force?: boolean
+}
+
 
 export type ContainerInspectPayload = ContainerCommandPayload
 
@@ -155,6 +166,12 @@ export type ContainerStartMessage = MessageEnvelope<
   ContainerCommandPayload
 >
 
+export type ContainerRemoveMessage = MessageEnvelope<
+  typeof CONTAINER_REMOVE,
+  ContainerRemovePayload
+>
+
+
 export type ContainerStopMessage = MessageEnvelope<
   typeof CONTAINER_STOP,
   ContainerCommandPayload
@@ -179,3 +196,4 @@ export type ContainerMessage =
   | ContainerStopMessage
   | ContainerRestartMessage
   | ContainerResultMessage
+  | ContainerRemoveMessage

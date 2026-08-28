@@ -101,6 +101,71 @@ func TestHostMetricsFieldsArePopulated(t *testing.T) {
 	}
 }
 
+// TestContainerRemoveMatchesProtocolFixture guards the server -> agent direction
+// of the same hand-mirrored contract. It matters more here than for metrics: a
+// mistyped `force` tag would decode to the zero value with no error anywhere, so
+// an operator's explicit force-remove would silently become an ordinary remove
+// that Docker then refuses.
+func TestContainerRemoveMatchesProtocolFixture(t *testing.T) {
+	fixtures := []struct {
+		name      string
+		wantForce bool
+	}{
+		{"container.remove.json", false},
+		{"container.remove.force.json", true},
+	}
+
+	for _, fixture := range fixtures {
+		t.Run(fixture.name, func(t *testing.T) {
+			raw, err := os.ReadFile(filepath.Join(fixturesDir, fixture.name))
+			if err != nil {
+				t.Fatalf("read fixture: %v", err)
+			}
+
+			var envelope struct {
+				Type    string          `json:"type"`
+				Payload json.RawMessage `json:"payload"`
+			}
+			if err := json.Unmarshal(raw, &envelope); err != nil {
+				t.Fatalf("decode envelope: %v", err)
+			}
+
+			if envelope.Type != TypeContainerRemove {
+				t.Errorf("envelope type = %q, want %q", envelope.Type, TypeContainerRemove)
+			}
+
+			var payload ContainerRemovePayload
+			if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
+				t.Fatalf("decode payload into ContainerRemovePayload: %v", err)
+			}
+
+			// The round trip catches a renamed key; these catch a key that decodes
+			// under the right name but into the wrong field.
+			if payload.RequestID == "" || payload.ContainerID == "" {
+				t.Errorf("requestId/containerId did not decode: %+v", payload)
+			}
+			if payload.Force != fixture.wantForce {
+				t.Errorf("force = %v, want %v", payload.Force, fixture.wantForce)
+			}
+
+			roundTripped, err := json.Marshal(payload)
+			if err != nil {
+				t.Fatalf("re-encode payload: %v", err)
+			}
+
+			want := normalize(t, envelope.Payload)
+			got := normalize(t, roundTripped)
+			if !reflect.DeepEqual(want, got) {
+				t.Errorf(
+					"payload does not round-trip through the Go structs.\n fixture: %s\n go:      %s\n"+
+						"The Go structs in client.go have drifted from packages/protocol.",
+					mustJSON(t, want), mustJSON(t, got),
+				)
+			}
+		})
+	}
+}
+
 // normalize decodes JSON into generic maps so comparison ignores key order and
 // integer/float formatting differences.
 func normalize(t *testing.T, data []byte) map[string]any {

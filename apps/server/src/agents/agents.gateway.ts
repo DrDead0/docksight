@@ -19,6 +19,7 @@ import {
   CONTAINER_RESTART,
   CONTAINER_RESULT,
   CONTAINER_START,
+  CONTAINER_REMOVE,
   CONTAINER_STOP,
   LOGS_CHUNK,
   LOGS_SUBSCRIBE,
@@ -75,6 +76,7 @@ const COMMAND_TYPE: Record<ContainerAction, string> = {
   start: CONTAINER_START,
   stop: CONTAINER_STOP,
   restart: CONTAINER_RESTART,
+  remove: CONTAINER_REMOVE,
 };
 
 @WebSocketGateway({ path: '/agents' })
@@ -173,6 +175,7 @@ export class AgentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     hostId: string,
     action: ContainerAction,
     containerId: string,
+    force = false,
     timeoutMs = 45_000,
   ): Promise<ContainerResultPayload> {
     this.inventory.rememberHost(hostId, agentUuid);
@@ -202,14 +205,18 @@ export class AgentsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.send(
         client,
-        createEnvelope(type, {
-          requestId,
-          containerId,
-        }),
+        createEnvelope(
+          type,
+          // Only container.remove carries `force`; the other three lifecycle
+          // commands share ContainerCommandPayload, which has no such field.
+          action === 'remove'
+            ? { requestId, containerId, force }
+            : { requestId, containerId },
+        ),
       );
 
       this.logger.log(
-        `Sent ${type} requestId=${requestId} containerId=${containerId.slice(0, 12)} uuid=${agentUuid}`,
+        `Sent ${type} requestId=${requestId} containerId=${containerId.slice(0, 12)} uuid=${agentUuid}${action === 'remove' ? ` force=${force}` : ''}`,
       );
     });
   }
