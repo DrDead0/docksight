@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -9,6 +10,7 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
@@ -22,7 +24,7 @@ import { HostsService } from './hosts.service';
 @ApiTags('hosts')
 @Controller('hosts')
 export class HostsController {
-  constructor(private readonly hostsService: HostsService) {}
+  constructor(private readonly hostsService: HostsService) { }
 
   @Get()
   @ApiOperation({ summary: 'List registered Docker hosts (agents)' })
@@ -73,5 +75,21 @@ export class HostsController {
       throw new NotFoundException(`Host not found: ${id}`);
     }
     return result;
+  }
+
+  @Delete(':id')
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Delete a host that has been inactive for at least 7 days',
+  })
+  @ApiOkResponse({ description: 'Host deleted' })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid token' })
+  @ApiForbiddenResponse({ description: 'Requires the ADMIN role' })
+  @ApiConflictResponse({
+    description: 'Host is active or was active within the last 7 days',
+  })
+  async deleteHost(@Param('id') id: string) {
+    await this.hostsService.deleteHost(id);
   }
 }

@@ -18,10 +18,12 @@ describe('HostsController', () => {
   let app: INestApplication;
   let role: UserRole;
   const updateDisplayName = jest.fn();
+  const deleteHost = jest.fn();
 
   beforeEach(async () => {
     role = 'ADMIN';
     updateDisplayName.mockReset();
+    deleteHost.mockReset();
 
     const authGuard: CanActivate = {
       canActivate(context: ExecutionContext) {
@@ -39,7 +41,7 @@ describe('HostsController', () => {
         Reflector,
         {
           provide: HostsService,
-          useValue: { updateDisplayName },
+          useValue: { updateDisplayName, deleteHost },
         },
         { provide: APP_GUARD, useValue: authGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
@@ -114,5 +116,27 @@ describe('HostsController', () => {
       .patch('/hosts/missing')
       .send({ displayName: 'prod-web-1' })
       .expect(404);
+  });
+
+  describe('DELETE /hosts/:id', () => {
+    it('lets an admin delete a host', async () => {
+      deleteHost.mockResolvedValue(undefined);
+
+      await request(app.getHttpServer() as App)
+        .delete('/hosts/host-1')
+        .expect(200);
+
+      expect(deleteHost).toHaveBeenCalledWith('host-1');
+    });
+
+    it('forbids VIEWER from deleting a host', async () => {
+      role = 'VIEWER';
+
+      await request(app.getHttpServer() as App)
+        .delete('/hosts/host-1')
+        .expect(403);
+
+      expect(deleteHost).not.toHaveBeenCalled();
+    });
   });
 });
