@@ -84,9 +84,7 @@ export function ContainerTable({
   }, [containers])
 
   const renderPort = (ports: any[]): string => {
-    console.log("before if", ports)
     if (!ports || ports.length === 0) return "-"
-    console.log("after if", ports)
     return ports[0].PublicPort + ":" + ports[0].PrivatePort
 
   }
