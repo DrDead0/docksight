@@ -25,7 +25,7 @@ import { FilterChips } from '@/components/ui/tabs'
 import { StatusBadge } from '@/components/StatusBadge'
 import { copyToClipboard, formatDateTime, shortId } from '@/lib/format'
 import { statusTone } from '@/lib/status'
-import type { Container, ContainerAction } from '@/types/api'
+import type { Container, ContainerAction, Port } from '@/types/api'
 import { Link } from 'react-router-dom'
 
 export type ContainerRow = Container & { hostId?: string; hostname?: string }
@@ -51,6 +51,18 @@ type ContainerTableProps = {
 }
 
 const NEEDS_ADMIN = 'Requires the ADMIN role'
+
+/**
+ * Every published/exposed port, joined rather than showing only the first
+ * mapping. `PublicPort` is empty for a port that is exposed but not
+ * published, which renders as the private port alone instead of `:80`.
+ */
+function renderPort(ports: Port[]): string {
+  if (!ports || ports.length === 0) return '-'
+  return ports
+    .map((port) => (port.PublicPort ? `${port.PublicPort}:${port.PrivatePort}` : `${port.PrivatePort}`))
+    .join(', ')
+}
 
 export function ContainerTable({
   containers,
@@ -82,12 +94,6 @@ export function ContainerTable({
     }
     return tally
   }, [containers])
-
-  const renderPort = (ports: any[]): string => {
-    if (!ports || ports.length === 0) return "-"
-    return ports[0].PublicPort + ":" + ports[0].PrivatePort
-
-  }
 
   const filtered = useMemo(() => {
     const value = query.trim().toLowerCase()
