@@ -311,15 +311,7 @@ export function ContainerInspectDrawer({
             />
           </DrawerSection>
 
-          <DrawerSection
-            title={`Networks (${details.networks.length})`}
-            // action={
-            //   <MockBadge
-            //     label="Gateway + DNS mocked"
-            //     title="ContainerNetwork only carries name and ip in the agent protocol"
-            //   />
-            // }
-          >
+          <DrawerSection title={`Networks (${details.networks.length})`}>
             <MiniTable
               headers={['Network', 'IP address', 'Gateway', 'DNS']}
               empty="No networks attached"
