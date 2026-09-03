@@ -344,7 +344,7 @@ func (c *Client) serve(ctx context.Context, conn *websocket.Conn) error {
 
 	eventsCh := make(chan struct{}, 1)
 	errCh := make(chan error, 2)
-	
+
 	if c.docker != nil {
 		go func() {
 			var debounceTimer *time.Timer
@@ -358,7 +358,7 @@ func (c *Client) serve(ctx context.Context, conn *websocket.Conn) error {
 				if serveCtx.Err() != nil {
 					return
 				}
-				
+
 				evMsg, evErr := c.docker.Events(serveCtx)
 
 			streamLoop:
@@ -450,7 +450,6 @@ func (c *Client) serve(ctx context.Context, conn *websocket.Conn) error {
 				logger.Warn("failed to push container list on event", "error", err.Error())
 			}
 		}
-		
 
 	}
 }
